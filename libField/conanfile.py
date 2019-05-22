@@ -3,8 +3,9 @@ import os
 
 class ConanPackage(ConanFile):
     name = "libField"
-    remote_url_basename = "https://github.com/CD3"
+    remote_url_basename = "git://github.com/CD3"
     version = "master"
+    checkout = "master"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for storing and working with field data."
@@ -16,13 +17,14 @@ class ConanPackage(ConanFile):
     build_requires = 'cmake_installer/3.13.0@conan/stable'
 
     def source(self):
-        self.run("git clone {REMOTE_URL}/libField".format(REMOTE_URL=self.remote_url_basename))
-        self.run("cd libField && git checkout {VERSION}".format(VERSION=self.version))
+        self.run(f"git clone {self.remote_url_basename}/{self.name}")
+        self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
     def build(self):
-        tools.replace_in_file('libField/CMakeLists.txt',
-                              'project(libField)',
-                              'project(libField)\nset(STANDALONE OFF)')
+        if not self.develop:
+          tools.replace_in_file(os.path.join(self.source_folder, self.name, 'CMakeLists.txt'),
+                                f'project({self.name})',
+                                f'project({self.name})\nset(STANDALONE OFF)')
         cmake = CMake(self)
         cmake.configure(source_folder="libField")
         cmake.build()
