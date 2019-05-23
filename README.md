@@ -1,7 +1,7 @@
 # Conan Package Recipes for CD3 Projects
 
 This is a collection of conan package recipes for various libraries I have written or use. Conan greatly simplifies
-managing project dependencies, so it is easy use a project that depends on another project. You just tell conan
+managing project dependencies, so it is easy to use a project that depends on another project. You just tell conan
 what your project dependencies are, and it will automatically locate and configure them for you.
 
 # Using
@@ -9,7 +9,7 @@ what your project dependencies are, and it will automatically locate and configu
 The `install.py` script will export all of the conan package recopies to your local cache.
 
 ```
-$ python ./install.py
+$ python3 ./install.py
 ```
 
 Conan can download and build packages on demand, so no packages are built during the install. You will only download and build
