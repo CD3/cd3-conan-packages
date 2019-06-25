@@ -63,10 +63,10 @@ if __name__ == '__main__':
 
   pc.load_configs(args.configuration)
 
-  test_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
-  if test_folder_path.exists():
-    shutil.rmtree(str(test_folder_path))
-  Path(pc.config[prog_path.stem]["scratch-folder"]).mkdir()
+  scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
+  if scratch_folder_path.exists():
+    shutil.rmtree(str(scratch_folder_path))
+  scratch_folder_path.mkdir()
 
   pc.add_packages(package_paths)
   if args.print_configuration:
