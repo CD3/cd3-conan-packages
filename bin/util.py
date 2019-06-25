@@ -132,24 +132,6 @@ class PackageCollection:
         else:
             return None
 
-    def export_environment(self, write_virtualenv_files=False):
-        env = dict()
-        for p_name in self.packages:
-            p_config = self.config["package_configs"][p_name]
-            env[p_name + "_VERSION"] = p_config["version"]
-            env[p_name + "_GROUP"] = p_config["group"]
-            env[p_name + "_CHANNEL"] = p_config["channel"]
-            env[p_name + "_CHECKOUT"] = p_config["checkout"]
-            env[p_name + "_URL_BASENAME"] = p_config["url_basename"]
-        for k in env:
-            os.environ[k] = env[k]
-
-        if write_virtualenv_files:
-            gen = VirtualEnvGenerator(SimpleNamespace(env=env))
-            for file in gen.content:
-                with open(file, "w") as f:
-                    f.write(gen.content[file])
-
     def write_static_conanfile(self, p_name):
         """Writes a static conanfile with explicit references to each package in set
         set."""

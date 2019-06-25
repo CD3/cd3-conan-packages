@@ -75,7 +75,6 @@ if __name__ == '__main__':
     sys.exit(0)
 
 
-  pc.export_environment()
   packages_to_export = pc.filter_packages( pc.config[prog_path.stem].get("packages_to_export","all") )
   with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
     print("Exporting packages: "+", ".join(packages_to_export))
