@@ -1,4 +1,5 @@
 import subprocess
+import shutil
 import os
 import collections
 import copy
@@ -12,18 +13,21 @@ from pathlib import Path
 
 from types import SimpleNamespace
 
+from pyparsing import *
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 
 try:
     from colorama import Fore, Back, Style
 
-    INFO = Fore.White
+    INFO = Fore.WHITE
+    EMPH = Fore.GREEN
     GOOD = Fore.GREEN
     WARN = Fore.YELLOW
     ERROR = Fore.RED
     EOL = Style.RESET_ALL
 except:
     INFO = ""
+    EMPH = ""
     GOOD = ""
     WARN = ""
     ERROR = ""
@@ -33,6 +37,9 @@ except:
 def run(cmd, stdout=None, stderr=None):
     return subprocess.call(cmd, shell=True, stdout=stdout, stderr=stderr)
 
+class parsers:
+  version_str = Combine(Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) ) ) ) )
+  version_tag = Optional(Literal("v") ^ "ver-" ) + version_str
 
 # a context manager for temperarily change the working directory.
 class working_directory(object):
@@ -47,6 +54,18 @@ class working_directory(object):
     def __exit__(self, type, value, traceback):
         if self.new_dir is not None:
             os.chdir(self.old_dir)
+
+class in_temporary_directory(object):
+    def __init__(self):
+      self.old_dir = os.getcwd()
+      self.tmpdir = tempfile.mkdtemp()
+
+    def __enter__(self):
+      os.chdir(self.tmpdir)
+
+    def __exit__(self, type, value, traceback):
+      os.chdir(self.old_dir)
+      shutil.rmtree(self.tmpdir)
 
 
 def update_dict(d, u):
@@ -114,6 +133,22 @@ class PackageCollection:
         p_config["folder"] = str(p_path)
         p_config["name"] = p_name
         update_dict(p_config, self.config["package_overrides"].get(p_name, {}))
+        # check if package version was given as 'latest-release'
+        # if so, determine what the latest release tag is
+        if p_config["version"] == 'latest-release':
+          print(f"Determining latest release for '{p_path}'")
+          repo_name = p_config.get("repo_name", p_config.get("name") )
+          url = f"{p_config['url_basename']}/{repo_name}"
+          tag = get_latest_release( url, p_config["checkout"] )
+          if tag is not None:
+            print(f"\tFound '{tag}'")
+            print(f"\tupdating 'checkout' and 'version' properties.")
+            p_config["checkout"] = tag
+            p_config["version"] = parsers.version_str.searchString(tag)[0][0]
+          else:
+            print("\tNo valid release tags found. Changing version to 'devel'")
+            p_config["version"] = "devel"
+
         self.config["package_configs"][p_name] = p_config
 
     def add_packages(self, p_paths):
@@ -269,3 +304,34 @@ class PackageCollection:
         return fpackages
 
     
+
+
+def get_version_tag(ref="HEAD"):
+    querry_cmd = f"git describe --tags --abbrev=0 {ref}"
+    result = subprocess.run(querry_cmd, shell=True, stdout=subprocess.PIPE)
+    output = result.stdout.decode('utf-8').strip()
+    if output == "":
+      return None
+    try:
+      parsers.version_tag.parseString(output)
+      return output
+    except:
+      print(f"'{output}' does not appear to be a version tag. Looking at previous tag.")
+      return get_version_tag( output+"^" )
+
+    return None
+
+def get_latest_release( url, branch="master"):
+  version_tag = None
+  with in_temporary_directory():
+    cmd = f'git clone --single-branch --branch {branch} {url} repo'
+    result = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    if result.returncode != 0:
+      print("There was an error trying to clone the repository. Make sure the branch exists on the remote")
+      print(f"Clone command: '{cmd}'")
+      raise Exception()
+    with working_directory("repo"):
+      version_tag = get_version_tag()
+  
+
+  return version_tag

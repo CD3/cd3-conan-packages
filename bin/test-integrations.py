@@ -144,6 +144,7 @@ def test_package(scratch_folder_path, package_name, do_unit_tests=True):
                               + util.EOL
                           )
                           return 1
+        print( util.GOOD + "All Good!" + util.EOL)
         return 0
 
 
@@ -179,20 +180,22 @@ if __name__ == "__main__":
     packages_to_export = pc.filter_packages(
         pc.config[prog_path.stem].get("packages_to_export", "all")
     )
+
     with (scratch_folder_path / "conan_export.out").open(
         "w"
     ) as f:
-        print("Exporting packages: " + ", ".join(packages_to_export))
+        print(util.EMPH+"Exporting packages: " + ", ".join(packages_to_export)+util.EOL)
         results = [pc.export_package(package, f) for package in packages_to_export]
         print("Done")
 
     if args.test:
       packages_to_test = args.test
     else:
-      packages_to_test = pc.filter_packages(
+      # Note: we don't test third party libs
+      packages_to_test = [ p for p in pc.filter_packages(
           pc.config[prog_path.stem].get("packages_to_test", "all")
-      )
-    print("Testing packages: " + ", ".join(packages_to_test))
+      ) if p not in pc.config["third_party_packages"] ]
+    print(util.EMPH+"Testing packages: " + ", ".join(packages_to_test)+util.EOL)
     results = [test_package(scratch_folder_path, package, args.do_unit_tests) for package in packages_to_test]
     print("Done")
 

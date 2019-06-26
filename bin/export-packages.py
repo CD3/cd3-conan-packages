@@ -29,10 +29,6 @@ parser.add_argument(
     dest='parallel',
     action='store_false',
     help="Do not run jobs in parallel")
-# parser.add_argument(
-    # "--create",
-    # action='store_true',
-    # help="Create packages after exporting them.")
 parser.add_argument(
     "--print-default-configuration",
     action='store_true',
@@ -49,6 +45,14 @@ prog_path = Path(parser.prog)
 
 package_paths = [Path(file).parent for file in Path.cwd().glob("*/conanfile.py")]
 if __name__ == '__main__':
+
+  print("Looking for submodules to install first.")
+  submodule_paths = [Path(file).parent for file in Path.cwd().glob("*/install.py")]
+  cmd_line_args = " ".join( map( lambda a : f"'{os.path.abspath(a)}'" if os.path.isfile(a) else f"'{a}'",  sys.argv[1:] ) )
+  for s in submodule_paths:
+    print(f"Runnings python3 ./install.py {cmd_line_args} in {s}")
+    with util.working_directory(s):
+      util.run(f"python3 ./install.py {cmd_line_args}")
 
   pc = util.PackageCollection()
   pc.baseline_config["package_defaults"]["version"] = "master"
