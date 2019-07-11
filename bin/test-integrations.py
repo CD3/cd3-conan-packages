@@ -20,15 +20,6 @@ parser.add_argument(
     nargs="*",
     help="File(s) contianing configurations to test.",
 )
-# parser.add_argument(
-    # "--parallel", dest="parallel", action="store_true", help="Run jobs in parallel"
-# )
-# parser.add_argument(
-    # "--no-parallel",
-    # dest="parallel",
-    # action="store_false",
-    # help="Do not run jobs in parallel",
-# )
 parser.add_argument(
     "--unit-tests", dest="do_unit_tests", action="store_true", help="Attempt to run the unit tests for all packages being tested after they are built."
 )
@@ -36,7 +27,7 @@ parser.add_argument(
     "--no-unit-tests",
     dest="do_unit_tests",
     action="store_false",
-    help="Do not run unit tests during package testing. Only build.",
+    help="Run unit tests during package testing.",
 )
 parser.add_argument(
     "--print-default-configuration",
@@ -51,13 +42,18 @@ parser.add_argument(
 parser.add_argument(
     "--test", "-t",
     action="append",
-    help="Packages to tests. This will override any packages specified in the configuration file.",
+    help="Packages to test. This will override any packages specified in the configuration file.",
 )
 parser.add_argument(
     "--profile",
     action="store",
     default="default",
     help="Conan profile",
+)
+parser.add_argument(
+    "--skip-export",
+    action="store_true",
+    help="Skip exporting packages and just tests.",
 )
 parser.set_defaults(parallel=True)
 parser.set_defaults(do_unit_tests=True)
@@ -66,30 +62,28 @@ args = parser.parse_args()
 prog_path = Path(parser.prog)
 
 
-def test_package(scratch_folder_path, package_name, do_unit_tests=True):
-    pdir = Path(package_name)
-    conanfile = pdir / "conanfile-static.py"
-    if not conanfile.is_file():
-        conanfile = pdir / "conanfile.py"
-    source_dir = scratch_folder_path
-    build_dir = source_dir / pdir / "build"
-    outfile = scratch_folder_path / f"{package_name}.out"
+def test_package(package, do_unit_tests=True):
+    conanfile = package.instance_conanfile
+    source_dir = Path(".")
+    build_dir = source_dir / package.name / "build"
+    outfile = f"{package.name}.out"
 
     with open(outfile, "w") as f:
 
-        print(package_name + ":Downloading Source with 'conan source ...'")
+        print(util.INFO+f"Testing {package.name}"+util.EOL)
+        print(util.INFO+f"  Downloading Source with 'conan source ...'"+util.EOL)
         if (
             util.run(f"conan source {conanfile} --source-folder={source_dir}", f, f)
             != 0
         ):
             print(
                 util.ERROR
-                + f"There was an error downloading source for {package_name}. You can view the output in {outfile}."
+                + f"There was an error downloading source for {package.name}. You can view the output in {os.getcwd()}/{outfile}."
                 + util.EOL
             )
             return 1
 
-        print(package_name + ":Installing Dependencies with 'conan install ...'")
+        print(util.INFO+"  Installing Dependencies with 'conan install ...'"+util.EOL)
         if (
             util.run(
                 f"conan install {conanfile} --profile {args.profile} --build missing --install-folder={build_dir}",
@@ -100,13 +94,13 @@ def test_package(scratch_folder_path, package_name, do_unit_tests=True):
         ):
             print(
                 util.ERROR
-                + f"There was an error installing dependencies for {package_name}. You can view the output in {outfile}."
+                + f"There was an error installing dependencies for {package.name}. You can view the output in {os.getcwd()}/{outfile}."
                 + util.EOL
             )
             f.write("\n\n")
             return 1
 
-        print(package_name + ":Building with 'conan build ...'")
+        print(util.INFO+ "  Building with 'conan build ...'"+util.EOL)
         if (
             util.run(
                 f"conan build {conanfile} --source-folder={source_dir} --install-folder={build_dir} --build-folder={build_dir}",
@@ -117,26 +111,26 @@ def test_package(scratch_folder_path, package_name, do_unit_tests=True):
         ):
             print(
                 util.ERROR
-                + f"There was an error building {package_name}. You can view the output in {outfile}."
+                + f"There was an error building {package.name}. You can view the output in {outfile}."
                 + util.EOL
             )
             return 1
 
         if do_unit_tests:
-          print(package_name + ":Looking for unit tests to run.")
+          print(util.INFO + "  Looking for unit tests to run."+util.EOL)
 
           # jump into the build directory
           with util.working_directory(build_dir):
               # search for unit tests
               for path in (
                   Path(dir)
-                  for dir in ["testBin", package_name + "-testing"]
+                  for dir in ["testBin", package.name + "-testing"]
                   if Path(dir).is_dir()
               ):
                   for file in filter(
                       lambda p: p.is_file() and os.access(str(p), os.X_OK), path.glob("*")
                   ):
-                      print("  Found " + str(file) + ". Running now.")
+                      print(util.INFO + "    Found " + str(file) + ". Running now."+util.EOL)
                       if util.run(str(file.resolve()), f, f) != 0:
                           print(
                               util.ERROR
@@ -152,51 +146,72 @@ package_paths = [Path(file).parent for file in Path.cwd().glob("*/conanfile.py")
 if __name__ == "__main__":
 
     pc = util.PackageCollection()
-
-    pc.baseline_config["package_defaults"]["version"] = "testing"
-    pc.baseline_config["package_defaults"]["channel"] = "integration-tests"
-    pc.baseline_config[prog_path.stem] = dict()
-    pc.baseline_config[prog_path.stem]["packages_to_test"] = "all"
-    pc.baseline_config[prog_path.stem]["packages_to_export"] = "all"
-    pc.baseline_config[prog_path.stem]["scratch-folder"] = "_test-integrations-{}.d"
+    default_configuration_text = f'''
+  package_defaults:
+    version: testing
+    channel: integration-tests
+    owner: cd3
+    git_url_basename: git@github.com:CD3
+    checkout: master
+  package_overrides:
+    UnitTestCpp :
+      version: "2.0"
+      checkout: "v2.0.0"
+      git_url_basename: "git://github.com/unittest-cpp"
+    XercesC:
+      version: "3.2.2"
+      git_url_basename : null
+      checkout : null
+  {prog_path.stem}:
+    packages_to_test:
+      include: '.*'
+      exclude:
+       - UnitTestCpp
+       - XercesC
+    scratch-folder : "_{prog_path.stem}.d"
+  '''
+    pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
     if args.print_default_configuration:
-        print("# Default Configuration")
-        print(yaml.dump(pc.baseline_config))
-        sys.exit(0)
+      print("# Default Configuration")
+      print(yaml.dump(pc.config))
+      sys.exit(0)
 
-    pc.load_configs(args.configuration)
+    for file in args.configuration:
+      pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
-    scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"].format(args.profile))
+    pc.add_from_conan_recipe_collection(".")
+    if args.print_configuration:
+      print("# Complete Configuration")
+      print(yaml.dump(pc.config))
+      sys.exit(0)
+
+    scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
     if scratch_folder_path.exists():
-        shutil.rmtree(str(scratch_folder_path))
+      shutil.rmtree(str(scratch_folder_path))
     scratch_folder_path.mkdir()
 
-    pc.add_packages(package_paths)
-    if args.print_configuration:
-        print("# Complete Configuration")
-        print(yaml.dump(pc.config))
-        sys.exit(0)
 
-    packages_to_export = pc.filter_packages(
-        pc.config[prog_path.stem].get("packages_to_export", "all")
-    )
+    
+    if args.skip_export:
+      print("Skipping export step. Packages currently in the local cache will be tested.")
+    else:
+      print("Removing all packages in the 'integration-tests' channel.")
+      util.run("conan remove -f */integration-tests")
+      print("Exporting packages")
+      with (scratch_folder_path / "conan_export.out" ).open('w') as f:
+        pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+      print("Done")
 
-    with (scratch_folder_path / "conan_export.out").open(
-        "w"
-    ) as f:
-        print(util.EMPH+"Exporting packages: " + ", ".join(packages_to_export)+util.EOL)
-        results = [pc.export_package(package, f) for package in packages_to_export]
-        print("Done")
+
 
     if args.test:
-      packages_to_test = args.test
+      packages_to_test = util.filter_packages( {'include' : args.test }, pc.packages )
     else:
-      # Note: we don't test third party libs
-      packages_to_test = [ p for p in pc.filter_packages(
-          pc.config[prog_path.stem].get("packages_to_test", "all")
-      ) if p not in pc.config["third_party_packages"] ]
-    print(util.EMPH+"Testing packages: " + ", ".join(packages_to_test)+util.EOL)
-    results = [test_package(scratch_folder_path, package, args.do_unit_tests) for package in packages_to_test]
+      packages_to_test = util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.packages )
+
+    print(util.EMPH+"Testing packages: " + ", ".join([p.name for p in packages_to_test])+util.EOL)
+    with util.working_directory(scratch_folder_path):
+      results = [test_package(package, args.do_unit_tests) for package in packages_to_test]
     print("Done")
 
     num_tests = len(results)

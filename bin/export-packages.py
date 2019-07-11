@@ -20,16 +20,6 @@ parser.add_argument(
     nargs='*',
     help="File contianing configurations to export.")
 parser.add_argument(
-    "--parallel",
-    dest='parallel',
-    action='store_true',
-    help="Run jobs in parallel")
-parser.add_argument(
-    "--no-parallel",
-    dest='parallel',
-    action='store_false',
-    help="Do not run jobs in parallel")
-parser.add_argument(
     "--print-default-configuration",
     action='store_true',
     help="Print the default configuration.")
@@ -46,45 +36,43 @@ prog_path = Path(parser.prog)
 package_paths = [Path(file).parent for file in Path.cwd().glob("*/conanfile.py")]
 if __name__ == '__main__':
 
-  if Path(sys.argv[0]).name == 'install.py':
-    print("Looking for submodules to install first.")
-    submodule_paths = [Path(file).parent for file in Path.cwd().glob("*/install.py")]
-    cmd_line_args = " ".join( map( lambda a : f"'{os.path.abspath(a)}'" if os.path.isfile(a) else f"'{a}'",  sys.argv[1:] ) )
-    for s in submodule_paths:
-      print(f"Runnings python3 ./install.py {cmd_line_args} in {s}")
-      with util.working_directory(s):
-        util.run(f"python3 ./install.py {cmd_line_args}")
-
   pc = util.PackageCollection()
-  pc.baseline_config["package_defaults"]["version"] = "master"
-  pc.baseline_config["package_defaults"]["channel"] = "devel"
-  pc.baseline_config[prog_path.stem] = dict()
-  pc.baseline_config[prog_path.stem]["packages_to_export"] = "all"
-  pc.baseline_config[prog_path.stem]["scratch-folder"] = "_package-exports.d"
+  default_configuration_text = f'''
+package_defaults:
+  version: master
+  channel: devel
+  owner: cd3
+  git_url_basename: git@github.com:CD3
+  checkout: master
+{prog_path.stem}:
+  packages_to_export : all
+  scratch-folder : "_package-exports.d"
+'''
+  pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
   if args.print_default_configuration:
     print("# Default Configuration")
-    print(yaml.dump(pc.baseline_config))
+    print(yaml.dump(pc.config))
     sys.exit(0)
 
-  pc.load_configs(args.configuration)
+  for file in args.configuration:
+    pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
+
+  pc.add_from_conan_recipe_collection(".")
+  if args.print_configuration:
+    print("# Complete Configuration")
+    print(yaml.dump(pc.config))
+    sys.exit(0)
 
   scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
   if scratch_folder_path.exists():
     shutil.rmtree(str(scratch_folder_path))
   scratch_folder_path.mkdir()
 
-  pc.add_packages(package_paths)
-  if args.print_configuration:
-    print("# Complete Configuration")
-    print(yaml.dump(pc.config))
-    sys.exit(0)
 
-
-  packages_to_export = pc.filter_packages( pc.config[prog_path.stem].get("packages_to_export","all") )
+  print("Exporting packages")
   with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
-    print("Exporting packages: "+", ".join(packages_to_export))
-    results = [ pc.export_package(package,f) for package in packages_to_export]
-    print("Done")
+    pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+  print("Done")
 
 
 

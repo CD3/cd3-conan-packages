@@ -9,7 +9,9 @@ import re
 import sys
 import pprint
 import tempfile
+import glob
 from pathlib import Path
+from hashlib import sha1
 
 from types import SimpleNamespace
 
@@ -41,6 +43,12 @@ class parsers:
   version_str = Combine(Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) ) ) ) )
   version_tag = Optional(Literal("v") ^ "ver-" ) + version_str
 
+  name_re = '''(?P<name>[^/"']+)'''
+  version_re = '''(?P<version>[^@"']+)'''
+  owner_re = '''(?P<owner>[^/"']+)'''
+  channel_re = '''(?P<channel>[^"']+)'''
+  conan_reference_re = f"{name_re}/{version_re}@{owner_re}/{channel_re}"
+
 # a context manager for temperarily change the working directory.
 class working_directory(object):
     def __init__(self, path):
@@ -56,16 +64,19 @@ class working_directory(object):
             os.chdir(self.old_dir)
 
 class in_temporary_directory(object):
-    def __init__(self):
+    def __init__(self,delete=True):
       self.old_dir = os.getcwd()
       self.tmpdir = tempfile.mkdtemp()
+      self.delete = delete
 
     def __enter__(self):
       os.chdir(self.tmpdir)
+      return self.tmpdir
 
     def __exit__(self, type, value, traceback):
       os.chdir(self.old_dir)
-      shutil.rmtree(self.tmpdir)
+      if self.delete:
+        shutil.rmtree(self.tmpdir)
 
 
 def update_dict(d, u):
@@ -90,168 +101,252 @@ def update_dict(d, u):
       d = u
       return d
 
+class Package:
+  '''Represents a conan package that can be exported. The package consists of:
+       - A baseline conanfile that will be edited to create a conanfile to export the package.
+       - A git url basename used to obtain the source.
+       - A repo name used to obtain the source.
+       - A checkout that will be used to checkout the commit to package.
+       - A name that will be used for the conan package reference.
+       - A version that will be used for the conan package reference.
+       - An owner that will be used for the conan package referance.
+       - A channel that will be used for the conan package reference.
+
+     A Package knows how to:
+       - Write a custom conan to export by editing the baseline conanfile and embedding
+         information about the source URL, version number, etc. This requires the conan recipe
+         to use variables for these parameters. See the conanfile.py recipes for an example.
+       - Export the custom conan file to the local cache with a specific package reference id.
+  '''
+
+
+  def __init__(self):
+    self.clear()
+
+  def clear(self):
+    self.path = None
+    self.baseline_conanfile = None
+    self.git_url_basename = None
+    self.repo_name = None
+    self.checkout = None
+    self.name = None
+    self.version = None
+    self.owner = None
+    self.channel = None
+
+    self.dependencies = None
+
+  def load(self,d):
+    '''Load a package configuration from a dict. All current settings are erased. Any settings not contained by the dict will be left uninitialized.'''
+    self.clear()
+    self.update(d)
+    
+  def update(self,d):
+    '''Update package configuration from a dict. All current settings that are not overwritten will remain.'''
+
+    # we want support old parameter names
+    # so we try them first, but overwrite them
+    # with newer parameter names.
+    self.baseline_conanfile = d.get("conanfile", self.baseline_conanfile)
+    self.baseline_conanfile = d.get("baseline_conanfile", self.baseline_conanfile)
+
+    self.git_url_basename = d.get("url_basename", self.git_url_basename )
+    self.git_url_basename = d.get("git_url_basename", self.git_url_basename )
+
+    self.repo_name = d.get("repo_name", self.repo_name)
+    self.checkout = d.get("checkout", self.checkout)
+    self.name = d.get("name", self.name)
+    self.version = d.get("version", self.version)
+    self.owner = d.get("group", self.owner)
+    self.owner = d.get("owner", self.owner)
+    self.channel = d.get("channel", self.channel)
+
+    self.dependencies = d.get("dependencies", self.dependencies)
+
+  @property
+  def conan_package_reference(self):
+    return f"{self.name}/{self.version}@{self.owner}/{self.channel}"
+
+  @property
+  def id(self):
+    return sha1(json.dumps(self.__dict__).encode('utf-8')).hexdigest()
+
+  @property
+  def baseline_conanfile_path(self):
+    return Path(self.baseline_conanfile)
+
+  @property
+  def instance_conanfile_path(self):
+    return self.baseline_conanfile_path.parent / Path(self.baseline_conanfile_path.stem + "-" + self.id + self.baseline_conanfile_path.suffix)
+
+  @property
+  def instance_conanfile(self):
+    return str(self.instance_conanfile_path)
+
+  def write_instance_conanfile(self):
+    # write an instance of the template conanfile for this package
+
+    conanfile = self.instance_conanfile_path
+    conanfile_text = None
+    if self.baseline_conanfile_path.is_file():
+      conanfile_text = self.baseline_conanfile_path.read_text()
+    else:
+      raise Exception( f"ERROR: baseline conanfile '{self.baseline_conanfile}' for package '{self.name}' does not exist. Check that it is accessible from '{os.getcwd()}'" )
+
+
+    # replace package settings in recipe
+
+    def replace_setting(key,value):
+      if value is None:
+        return
+
+      nonlocal conanfile_text
+      regex = re.compile(fr"^(\s*){key}\s*=\s*.*",re.MULTILINE)
+      msg = "Note: this line was modified to inject settings for this instance."
+      text,n = re.subn( regex, fr"\1{key} = '{value}' # {msg}", conanfile_text)
+      if n < 1:
+        print(
+              WARN
+              + f"Could not replace '{key}'. Parameter *must* be define a variable named '{self.baseline_conanfile}' file to replace."
+              + EOL )
+
+      if n > 1:
+        print(
+              WARN
+              + f"Replaced more than one instance of '{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
+              + EOL )
+      
+
+      conanfile_text = text
+
+
+
+    replace_setting( "name", self.name )
+    replace_setting( "version", self.version )
+    replace_setting( "checkout", self.checkout )
+    replace_setting( "git_url_basename", self.git_url_basename)
+    replace_setting( "repo_name", self.repo_name)
+
+    # replace package references with specific instances required by this instance
+    print(INFO+f'''  Writing conan package reference instances for '{self.name}' instance recipe.''')
+    if self.dependencies is not None:
+      for instance in self.dependencies : # loop through instances
+        instance_parse = re.match(fr'''(?P<conan_reference>{parsers.conan_reference_re})''',instance)
+        if instance_parse is None:
+          raise Exception(f"ERROR: it appears that a non-package reference (could not parse '{instance}' as a conan package reference) was listed in the 'dependencies' for '{self.name}'.")
+        for reference_parse in re.finditer( fr'''["'](?P<conan_reference>{parsers.conan_reference_re})["']''', conanfile_text ): # loop to references in conanfile
+          if reference_parse is not None:
+            if instance_parse.group("name") == reference_parse.group("name"):
+              print(INFO+f'''    replacing '{reference_parse.group("conan_reference")}' with '{instance}' ''')
+              conanfile_text = conanfile_text.replace(reference_parse.group("conan_reference"),instance)
+    print(EOL)
+
+
+
+
+    conanfile.write_text( conanfile_text )
+
+  def export(self, stdout=None):
+    self.write_instance_conanfile()
+    rc = run(f"conan export {self.instance_conanfile} {self.conan_package_reference}", stdout, stdout)
+    if rc != 0:
+      print(ERROR)
+      print(f"There was an error exporting {self.name}.")
+      if stdout is not None:
+        print(f"You can view the output in {Path(stdout.name).resolve()}." )
+      print(EOL)
+      return 1
+    return 0
+
+
+
+
+  
+
+
+
+
+
 
 class PackageCollection:
-    baseline_config = {
-        "package_defaults": {
-            "url_basename": "git@github.com:CD3",
-            "checkout": "master",
-            "version": None,
-            "group": "cd3",
-            "channel": None,
-            "conanfile": "conanfile.py",
-        },
-        "package_overrides": {},
-        "package_configs": {},
-        "use_cache": []
-    }
 
-    def __init__(self, profile='default'):
-        self.config = dict()
-        self.packages = list()
-        self.profile = profile
+    def __init__(self):
+      self.clear()
 
-        name = '''(?P<name>[^/"']+)'''
-        version = '''(?P<version>[^@"']+)'''
-        group = '''(?P<group>[^/"']+)'''
-        channel = '''(?P<channel>[^"']+)'''
-        self.conan_reference_re = f"{name}/{version}@{group}/{channel}"
+    def clear(self):
+      self.config = dict()
+      self.packages = list()
 
-    def load_configs(self, files):
-        self.config = copy.deepcopy(self.baseline_config)
-        for file in files:
-            with open(file, "r") as f:
-                update_dict(self.config, yaml.load(f, Loader=yaml.SafeLoader))
+    def load(self,d=None):
+      if d is None:
+        d = self.config
+      self.clear()
+      self.update(d)
 
-    def get_package_name(self, p_path):
-        return p_path.name
+    def update(self,d=None):
+      if d is None:
+        d = self.config
 
-    def add_package(self, p_path):
-        p_config = copy.deepcopy(self.config["package_defaults"])
-        p_name = self.get_package_name(p_path)
-        self.packages.append(p_name)
-        p_config["folder"] = str(p_path)
-        p_config["name"] = p_name
-        update_dict(p_config, self.config["package_overrides"].get(p_name, {}))
-        # check if package version was given as 'latest-release'
-        # if so, determine what the latest release tag is
-        if p_config["version"] == 'latest-release':
-          print(f"Determining latest release for '{p_path}'")
-          repo_name = p_config.get("repo_name", p_config.get("name") )
-          url = f"{p_config['url_basename']}/{repo_name}"
-          tag = get_latest_release( url, p_config["checkout"] )
-          if tag is not None:
-            print(f"\tFound '{tag}'")
-            print(f"\tupdating 'checkout' and 'version' properties.")
-            p_config["checkout"] = tag
-            p_config["version"] = parsers.version_str.searchString(tag)[0][0]
-          else:
-            print("\tNo valid release tags found. Changing version to 'devel'")
-            p_config["version"] = "devel"
+      update_dict(self.config,d)
 
-        self.config["package_configs"][p_name] = p_config
+      for pi in self.config.get("package_instances",[]):
+        p = Package()
+        p.load( self.config.get("package_defaults",{} ))
+        p.update( self.config.get("package_overrides",{}).get(pi.get("name"),{} ) )
+        p.update( pi )
+        self.packages.append(p)
 
-    def add_packages(self, p_paths):
-        for p_path in p_paths:
-            self.add_package(p_path)
+      for p in self.packages:
+        p.dependencies = self._build_dependency_set(p.dependencies)
 
-    def get_full_package_name(self, p_name):
-        if p_name in self.config["package_configs"]:
-            p_config = self.config["package_configs"][p_name]
-            p_name = p_config["name"]
-            p_version = p_config["version"]
-            p_group = p_config["group"]
-            p_channel = p_config["channel"]
-            full_name = f"{p_name}/{p_version}@{p_group}/{p_channel}"
-            return full_name
+    def _build_dependency_set(self, config):
+
+      if config is None:
+        return self._build_dependency_set("collection")
+
+      if isinstance(config,str):
+        if config.lower() == "clear all" or config.lower() == "clear":
+          return []
+        if config.lower() == "collection instances" or config.lower() == "collection":
+          return [p.conan_package_reference for p in self.packages]
+
+        dependency_parse = re.match(fr'''(?P<conan_reference>{parsers.conan_reference_re})''',config)
+        if dependency_parse:
+          return [config]
         else:
-            return None
-
-    def write_static_conanfile(self, p_name):
-        """Writes a static conanfile with explicit references to each package in set
-        set."""
-
-        p_config = self.config["package_configs"][p_name]
-
-        folder = Path(p_config["folder"])
-        file = p_config["conanfile"]
-        sfile = "conanfile-static.py"
-
-        conanfile_text = (folder/file).read_text()
-
-        # replace version and checkout settings for *this* package
-        for setting in ["version", "checkout"]:
-          regex = re.compile(f"^(\s*){setting}\s*=\s*.*",re.MULTILINE)
-          value = p_config[setting]
-          msg = "Note: this line was modified to make sure this setting is static."
-          conanfile_text = re.sub( regex, fr"\1{setting} = '{value}' # {msg}", conanfile_text)
-        # replace references to *dependencies*
-        for m in re.finditer( fr'''["'](?P<conan_reference>{self.conan_reference_re})["']''', conanfile_text ):
-          dep_reference = self.get_full_package_name( m.group('name'))
-          if dep_reference is not None:
-            pat = m.group("conan_reference")
-            rep = dep_reference
-            print(INFO+f"  replacing '{pat}' with '{rep}' in '{p_name}' package for static recipe")
-            conanfile_text = conanfile_text.replace(pat,rep)
-
-        (folder/sfile).write_text(conanfile_text)
-
-        return folder/sfile
+          raise Exception(f"Error: Dependency specification '{config}' is not a known command or valid connan package reference.")
 
 
 
+      if isinstance(config,list):
+        dependencies = []
+        for item in config:
+          if item == "clear":
+            dependencies = []
+            continue
 
-    def export_package(self, p_name, stdout):
-        full_name = self.get_full_package_name(p_name)
+          dependencies += self._build_dependency_set(item)
 
-        print(INFO + f"Exporting {p_name} to {full_name}" + EOL)
-        use_cache_packages = self.filter_packages( self.config.get("use_cache", "none") )
-        if p_name in use_cache_packages:
-            print(
-                INFO
-                + f"  using cached package (if it exists) for {p_name}. {full_name} will NOT be removed from local cache."
-                + EOL
-            )
-        else:
-            print(INFO + f"  removing {full_name} from local cache" + EOL)
-            rc = run(f"conan remove -f {full_name}", stdout, stdout)
+        return dependencies
 
 
+    def add_from_conan_recipe_collection(self,dir):
+      '''Build a package collection from a set of directories containing conanfiles. For example, a recipe repository.'''
+      cwd = Path(dir)
+      if not cwd.is_dir():
+        raise Exception(f"Cannot build package collection from '{dir}', directory does not exist")
 
+      if 'package_instances' not in self.config:
+        self.config['package_instances'] = []
+      for file in cwd.glob( '*/conanfile.py' ):
+        self.config['package_instances'].append( { 'name': file.parent.name, 'baseline_conanfile' : str(file.absolute()) } )
 
-        static_conanfile = self.write_static_conanfile(p_name)
+      self.load() # recreate packages
 
-
-
-        rc = run(f"conan export {static_conanfile} {full_name}", stdout, stdout)
-        if rc != 0:
-            print(
-                ERROR
-                + f"There was an error exporting {p_name}. You can view the output in {stdout.name}."
-                + EOL
-            )
-            return 1
-        return 0
-
-
-    def create_packages(self):
-        pass
-
-    def a_deps_on_b( self, ref_a, ref_b ):
-      '''Return true if package reference a (first argument) depends on package reference b (second argument.'''
-
-      with tempfile.TemporaryDirectory() as dir:
-        json_file = Path(dir)/"conan-info.json"
-        stdout = Path(dir)/"conan-info.out"
-        f = stdout.open('w')
-        run( f"conan info {ref_a} --json {str(json_file)}",f,f )
-        data = json.loads( (json_file.read_text()) )
-        for p in data:
-          if ref_b in p.get( 'requires', [] ):
-            return True
-
-
-      return False
+    def export_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.packages)
+      for p in pks:
+        p.export(stdout)
 
 
 
@@ -259,51 +354,71 @@ class PackageCollection:
 
 
 
-    def filter_packages(self, config, packages=None):
-        if packages is None:
-            packages = self.packages
 
-        fpackages = list()
-        for package in packages:
+
+
+
+def filter_packages( config, packages ):
+
+    fpackages = list()
+    for package in packages:
+        add = False
+
+        if isinstance( config, str ):
+          if config.lower() == "all":
+            add = True
+          elif config.lower() == "none":
             add = False
+          else:
+            raise Exception(f"Unknown filter string '{config}'")
 
-            if isinstance( config, str ):
-              if config.lower() == "all":
+
+        if isinstance( config, list ):
+          if package.name in config:
+            add = True
+
+        if isinstance( config, dict ):
+          if 'include' in config:
+            patterns = config['include'] if isinstance(config['include'],list) else [config['include']]
+            for pattern in patterns:
+              if re.match( pattern, package.name ):
                 add = True
-              elif config.lower() == "none":
+
+          if 'exclude' in config:
+            patterns = config['exclude'] if isinstance(config['exclude'],list) else [config['exclude']]
+            for pattern in patterns:
+              if re.match( pattern, package.name ):
                 add = False
-              else:
-                raise Exception(f"Unknown filter string '{config}'")
 
-
-            if isinstance( config, list ):
-              if package in config:
+          if 'depends_on' in config:
+            deps = config['depends_on'] if isinstance(config['depends_on'],list) else [config['depends_on']]
+            for dep in deps:
+              if a_deps_on_b( get_full_package_name(package), get_full_package_name(dep) ):
                 add = True
+                break
 
-            if isinstance( config, dict ):
-              if 'include' in config:
-                patterns = config['include'] if isinstance(config['include'],list) else [config['include']]
-                for pattern in patterns:
-                  if re.match( pattern, package ):
-                    add = True
-              if 'exclude' in config:
-                patterns = config['exclude'] if isinstance(config['exclude'],list) else [config['exclude']]
-                for pattern in patterns:
-                  if re.match( pattern, package ):
-                    add = False
-
-              if 'depends_on' in config:
-                deps = config['depends_on'] if isinstance(config['depends_on'],list) else [config['depends_on']]
-                for dep in deps:
-                  if self.a_deps_on_b( self.get_full_package_name(package), self.get_full_package_name(dep) ):
-                    add = True
-                    break
-
-            if add:
-              fpackages.append(package)
-        return fpackages
-
+        if add:
+          fpackages.append(package)
+    return fpackages
     
+
+def a_deps_on_b( ref_a, ref_b ):
+  '''Return true if package reference a (first argument) depends on package reference b (second argument).'''
+
+  with tempfile.TemporaryDirectory() as dir:
+    json_file = Path(dir)/"conan-info.json"
+    stdout = Path(dir)/"conan-info.out"
+    f = stdout.open('w')
+    res = run( f"conan info {ref_a} --json {str(json_file)}",f,f )
+    if res != 0:
+      json_file.write_text("{}")
+    data = json.loads( (json_file.read_text()) )
+    for p in data:
+      if ref_b in p.get( 'requires', [] ):
+        return True
+
+
+  return False
 
 
 def get_version_tag(ref="HEAD"):

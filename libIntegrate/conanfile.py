@@ -3,7 +3,7 @@ import os
 
 class ConanPackage(ConanFile):
     name = "libIntegrate"
-    remote_url_basename = "git://github.com/CD3"
+    git_url_basename = "git://github.com/CD3"
     version = "master"
     checkout = "master"
 
@@ -17,7 +17,7 @@ class ConanPackage(ConanFile):
     build_requires = 'cmake_installer/3.13.0@conan/stable'
 
     def source(self):
-        self.run(f"git clone {self.remote_url_basename}/{self.name}")
+        self.run(f"git clone {self.git_url_basename}/{self.name}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
     def build(self):

@@ -1,3 +1,4 @@
-conanfile-static.py
+conanfile-*.py
 _*.d/
 __pycache__/
+
