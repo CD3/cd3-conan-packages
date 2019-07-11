@@ -614,3 +614,61 @@ package_instances:
 
   pc.load(config)
 
+def test_get_latest_version_tag_and_get_latest_release():
+  with util.in_temporary_directory() as d:
+    print(d)
+    repo = Path("MyProject").resolve()
+
+    repo.mkdir()
+    with util.working_directory(str(repo)):
+      file = Path("file.txt")
+      file.touch()
+      util.run('git init')
+      util.run('git add .')
+      util.run('git commit -m "initial import"') 
+      
+      def edit_commit_tag(version, num=1):
+        for i in range(num):
+          file.write_text(f"{version} commit {i}")
+          util.run(f'git add .')
+          util.run(f'git commit -m "pre-{version} edit {i}"') 
+        util.run(f'git tag {version}') 
+
+      edit_commit_tag("v1.0",1)
+      edit_commit_tag("v1.1",2)
+      edit_commit_tag("v1.1.1",2)
+      edit_commit_tag("v1.1.2",1)
+      edit_commit_tag("v2.0",5)
+      edit_commit_tag("v2.1",2)
+      edit_commit_tag("v2.1.1",2)
+      edit_commit_tag("v2.1.2",1)
+      edit_commit_tag("v2.2",1)
+      edit_commit_tag("v2.3",2)
+      util.run("git checkout -b devel")
+      edit_commit_tag("v2.3.1",2)
+      edit_commit_tag("v3",2)
+      edit_commit_tag("v3.1",3)
+      edit_commit_tag("v3.1.1",3)
+      edit_commit_tag("v3.1.2",3)
+      edit_commit_tag("v3.2.0",3)
+
+      assert util.get_latest_version_tag() == "v3.2.0"
+      assert util.get_latest_version_tag("HEAD^") == "v3.1.2"
+      assert util.get_latest_version_tag("HEAD^^") == "v3.1.2"
+      assert util.get_latest_version_tag("v3.2.0^") == "v3.1.2"
+      assert util.get_latest_version_tag("v3.1.2^") == "v3.1.1"
+      assert util.get_latest_version_tag("v3.1.1^") == "v3.1"
+      assert util.get_latest_version_tag("v3.1^") == "v3"
+      assert util.get_latest_version_tag("v3^") == "v2.3.1"
+
+      assert util.get_latest_release( repo ) == "v2.3"
+      assert util.get_latest_release( repo, major_series = '1' ) == "v1.1.2"
+      assert util.get_latest_release( repo, "devel" ) == "v3.2.0"
+      assert util.get_latest_release( repo, "devel", major_series = '2' ) == "v2.3.1"
+
+
+
+
+
+
+

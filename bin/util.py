@@ -40,7 +40,8 @@ def run(cmd, stdout=None, stderr=None):
     return subprocess.call(cmd, shell=True, stdout=stdout, stderr=stderr)
 
 class parsers:
-  version_str = Combine(Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) ) ) ) )
+  version_num = Word(nums) + Optional( (".") + Word(nums) + Optional( "." + Word(nums) + Optional( "." + Word(nums) ) ) )
+  version_str = Combine(version_num)
   version_tag = Optional(Literal("v") ^ "ver-" ) + version_str
 
   name_re = '''(?P<name>[^/"']+)'''
@@ -202,7 +203,7 @@ class Package:
 
       nonlocal conanfile_text
       regex = re.compile(fr"^(\s*){key}\s*=\s*.*",re.MULTILINE)
-      msg = "Note: this line was modified to inject settings for this instance."
+      msg = "Note: this line was modified to make sure this setting is static."
       text,n = re.subn( regex, fr"\1{key} = '{value}' # {msg}", conanfile_text)
       if n < 1:
         print(
@@ -421,7 +422,14 @@ def a_deps_on_b( ref_a, ref_b ):
   return False
 
 
-def get_version_tag(ref="HEAD"):
+def get_latest_version_tag(ref="HEAD"):
+    '''Returns the most recent version tag on the branch containing @ref.
+       
+       This function works by calling git describe on @ref to get the latest tag.
+       If the tag does not look like a version tag, it recursively calls itself
+       on the tag, which will then look at the second oldest tag. This is repeated
+       until a version tag is found, or no more tags exist.
+    '''
     querry_cmd = f"git describe --tags --abbrev=0 {ref}"
     result = subprocess.run(querry_cmd, shell=True, stdout=subprocess.PIPE)
     output = result.stdout.decode('utf-8').strip()
@@ -432,11 +440,35 @@ def get_version_tag(ref="HEAD"):
       return output
     except:
       print(f"'{output}' does not appear to be a version tag. Looking at previous tag.")
-      return get_version_tag( output+"^" )
+      return get_latest_version_tag( output+"^" )
 
     return None
 
-def get_latest_release( url, branch="master"):
+
+def get_latest_release( url, branch="master", major_series = None, predicates = None ):
+  '''Returns the latest release tag on the @branch branch of a repository.
+  
+     This function works by cloning the repository into a temporary directory,
+     checking out @branch, and calling `git_version_tag` on the head.
+  '''
+  if predicates is None:
+    predicates = []
+
+  if not isinstance(predicates,list):
+    predicates = [predicates]
+
+  if major_series:
+    def is_in_major_series( version_tag ):
+      version_parse = parsers.version_tag.parseString(version_tag)
+      version_str = version_parse[-1]
+      version_parse = parsers.version_num.parseString(version_str)
+      major_num = version_parse[0]
+
+      return major_num == str(major_series)
+    predicates.append(is_in_major_series)
+
+
+
   version_tag = None
   with in_temporary_directory():
     cmd = f'git clone --single-branch --branch {branch} {url} repo'
@@ -446,7 +478,12 @@ def get_latest_release( url, branch="master"):
       print(f"Clone command: '{cmd}'")
       raise Exception()
     with working_directory("repo"):
-      version_tag = get_version_tag()
+      version_tag = get_latest_version_tag()
+      if predicates is not None and len(predicates) > 0:
+        while version_tag is not None and not any([ p(version_tag) for p in predicates ]):
+          version_tag = get_latest_version_tag(f'{version_tag}^')
+
+
   
 
   return version_tag

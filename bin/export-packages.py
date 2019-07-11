@@ -57,7 +57,9 @@ package_defaults:
   for file in args.configuration:
     pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
-  pc.add_from_conan_recipe_collection(".")
+  if not 'package_instances' in pc.config:
+    pc.add_from_conan_recipe_collection(".")
+
   if args.print_configuration:
     print("# Complete Configuration")
     print(yaml.dump(pc.config))

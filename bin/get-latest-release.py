@@ -19,11 +19,16 @@ parser.add_argument("--branch",
                     default="master",
                     help="Name of branch to look on." )
 
+parser.add_argument("--major-series",
+                    action="store",
+                    default=None,
+                    help="Return latest tagged release in given major series." )
+
 args = parser.parse_args()
 
 
 
-version_tag = util.get_latest_release(args.url,args.branch)
+version_tag = util.get_latest_release(args.url,args.branch,args.major_series)
 if version_tag is None:
   print("Could not find a version tag in repository.")
 else:
