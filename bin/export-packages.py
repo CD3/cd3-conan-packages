@@ -42,7 +42,7 @@ package_defaults:
   version: master
   channel: devel
   owner: cd3
-  git_url_basename: git@github.com:CD3
+  git_url_basename: git://github.com/CD3
   checkout: master
 {prog_path.stem}:
   packages_to_export : all
