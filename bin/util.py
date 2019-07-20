@@ -249,7 +249,7 @@ class Package:
 
   def export(self, stdout=None):
     self.write_instance_conanfile()
-    rc = run(f"conan export {self.instance_conanfile} {self.conan_package_reference}", stdout, stdout)
+    rc = run(f'''conan export "{self.instance_conanfile}" "{self.conan_package_reference}" ''', stdout, stdout)
     if rc != 0:
       print(ERROR)
       print(f"There was an error exporting {self.name}.")
@@ -410,7 +410,7 @@ def a_deps_on_b( ref_a, ref_b ):
     json_file = Path(dir)/"conan-info.json"
     stdout = Path(dir)/"conan-info.out"
     f = stdout.open('w')
-    res = run( f"conan info {ref_a} --json {str(json_file)}",f,f )
+    res = run( f'''conan info "{ref_a}" --json "{str(json_file)}" ''',f,f )
     if res != 0:
       json_file.write_text("{}")
     data = json.loads( (json_file.read_text()) )
@@ -430,7 +430,7 @@ def get_latest_version_tag(ref="HEAD"):
        on the tag, which will then look at the second oldest tag. This is repeated
        until a version tag is found, or no more tags exist.
     '''
-    querry_cmd = f"git describe --tags --abbrev=0 {ref}"
+    querry_cmd = f'''git describe --tags --abbrev=0 "{ref}"'''
     result = subprocess.run(querry_cmd, shell=True, stdout=subprocess.PIPE)
     output = result.stdout.decode('utf-8').strip()
     if output == "":
@@ -471,7 +471,7 @@ def get_latest_release( url, branch="master", major_series = None, predicates = 
 
   version_tag = None
   with in_temporary_directory():
-    cmd = f'git clone --single-branch --branch {branch} {url} repo'
+    cmd = f'''git clone --single-branch --branch "{branch}" "{url}" repo'''
     result = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     if result.returncode != 0:
       print("There was an error trying to clone the repository. Make sure the branch exists on the remote")
@@ -487,3 +487,11 @@ def get_latest_release( url, branch="master", major_series = None, predicates = 
   
 
   return version_tag
+
+def is_exe(path):
+    if sys.platform.startswith('win32'):
+        return str(path).endswith(".exe")
+    if sys.platform.startswith("linux"):
+        return os.access(str(path), os.X_OK)
+    return False
+

@@ -2,11 +2,13 @@
 
 import glob
 import os
+import stat
 import subprocess
 import multiprocessing
 import shutil
 import sys
 import yaml
+import itertools
 from pathlib import Path
 
 import util
@@ -27,7 +29,7 @@ parser.add_argument(
     "--no-unit-tests",
     dest="do_unit_tests",
     action="store_false",
-    help="Run unit tests during package testing.",
+    help="Do not run unit tests during package testing.",
 )
 parser.add_argument(
     "--print-default-configuration",
@@ -45,16 +47,33 @@ parser.add_argument(
     help="Packages to test. This will override any packages specified in the configuration file.",
 )
 parser.add_argument(
-    "--profile",
-    action="store",
-    default="default",
+    "--profile","-p",
+    action="append",
+    default=[],
     help="Conan profile",
 )
 parser.add_argument(
     "--skip-export",
     action="store_true",
-    help="Skip exporting packages and just tests.",
+    help="Skip exporting packages and just run tests.",
 )
+
+parser.add_argument(
+    "--clear-cache",
+    dest="clear_cache",
+    action="store_true",
+    default=True,
+    help="Clear the cache before exporting packages.",
+)
+
+parser.add_argument(
+    "--no-clear-cache",
+    dest="clear_cache",
+    action="store_false",
+    default=True,
+    help="Do not clear the cache before exporting packages.",
+)
+
 parser.set_defaults(parallel=True)
 parser.set_defaults(do_unit_tests=True)
 args = parser.parse_args()
@@ -65,28 +84,17 @@ prog_path = Path(parser.prog)
 def test_package(package, do_unit_tests=True):
     conanfile = package.instance_conanfile
     source_dir = Path(".")
-    build_dir = source_dir / package.name / "build"
-    outfile = f"{package.name}.out"
+    build_dir = source_dir / (package.name + ".build")
+    outfile = Path(f"{package.name}.out")
+    profile_opts = " ".join([ f'-p "{p}"' for p in args.profile])
 
     with open(outfile, "w") as f:
 
         print(util.INFO+f"Testing {package.name}"+util.EOL)
-        print(util.INFO+f"  Downloading Source with 'conan source ...'"+util.EOL)
-        if (
-            util.run(f"conan source {conanfile} --source-folder={source_dir}", f, f)
-            != 0
-        ):
-            print(
-                util.ERROR
-                + f"There was an error downloading source for {package.name}. You can view the output in {os.getcwd()}/{outfile}."
-                + util.EOL
-            )
-            return 1
-
-        print(util.INFO+"  Installing Dependencies with 'conan install ...'"+util.EOL)
+        print(util.INFO+f'''  Installing Dependencies with 'conan install "{conanfile}" {profile_opts} --build missing --install-folder="{build_dir}" '''+util.EOL)
         if (
             util.run(
-                f"conan install {conanfile} --profile {args.profile} --build missing --install-folder={build_dir}",
+                f'''conan install "{conanfile}" {profile_opts} --build missing --install-folder="{build_dir}"''',
                 f,
                 f,
             )
@@ -94,16 +102,28 @@ def test_package(package, do_unit_tests=True):
         ):
             print(
                 util.ERROR
-                + f"There was an error installing dependencies for {package.name}. You can view the output in {os.getcwd()}/{outfile}."
+                + f"There was an error installing dependencies for {package.name}. You can view the output in {str(outfile.resolve())}."
                 + util.EOL
             )
             f.write("\n\n")
             return 1
 
-        print(util.INFO+ "  Building with 'conan build ...'"+util.EOL)
+        print(util.INFO+f'''  Downloading Source with 'conan source "{conanfile}" --source-folder="{source_dir}" --install-folder="{build_dir}"' '''+util.EOL)
+        if (
+            util.run(f'''conan source "{conanfile}" --source-folder="{source_dir}" --install-folder="{build_dir}"''', f, f)
+            != 0
+        ):
+            print(
+                util.ERROR
+                + f"There was an error downloading source for {package.name}. You can view the output in {str(outfile.resolve())}."
+                + util.EOL
+            )
+            return 1
+
+        print(util.INFO+f'''  Building with 'conan build "{conanfile}" --source-folder="{source_dir}" --install-folder="{build_dir}" --build-folder="{build_dir}"' '''+util.EOL)
         if (
             util.run(
-                f"conan build {conanfile} --source-folder={source_dir} --install-folder={build_dir} --build-folder={build_dir}",
+                f'''conan build "{conanfile}" --source-folder="{source_dir}" --install-folder="{build_dir}" --build-folder="{build_dir}"''',
                 f,
                 f,
             )
@@ -111,7 +131,7 @@ def test_package(package, do_unit_tests=True):
         ):
             print(
                 util.ERROR
-                + f"There was an error building {package.name}. You can view the output in {outfile}."
+                + f"There was an error building {package.name}. You can view the output in {str(outfile.resolve())}."
                 + util.EOL
             )
             return 1
@@ -128,13 +148,13 @@ def test_package(package, do_unit_tests=True):
                   if Path(dir).is_dir()
               ):
                   for file in filter(
-                      lambda p: p.is_file() and os.access(str(p), os.X_OK), path.glob("*")
+                      lambda p: p.is_file() and util.is_exe(p), itertools.chain( path.glob("*"),path.glob("Debug/*"),path.glob("Release/*") )
                   ):
                       print(util.INFO + "    Found " + str(file) + ". Running now."+util.EOL)
-                      if util.run(str(file.resolve()), f, f) != 0:
+                      if util.run(f'''"{str(file.resolve())}"''', f, f) != 0:
                           print(
                               util.ERROR
-                              + f"There was an error running unit tests. You can view the output in {outfile}"
+                              + f"There was an error running unit tests. You can view the output in {str(outfile.resolve())}"
                               + util.EOL
                           )
                           return 1
@@ -187,7 +207,11 @@ if __name__ == "__main__":
 
     scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
     if scratch_folder_path.exists():
-      shutil.rmtree(str(scratch_folder_path))
+      # Can't remove directory on Windows unless all files are writeable.
+      for root,dirs,files in os.walk(scratch_folder_path):
+        for f in files:
+          os.chmod(Path(root)/f, stat.S_IWRITE)
+      shutil.rmtree(scratch_folder_path)
     scratch_folder_path.mkdir()
 
 
@@ -195,8 +219,9 @@ if __name__ == "__main__":
     if args.skip_export:
       print("Skipping export step. Packages currently in the local cache will be tested.")
     else:
-      print("Removing all packages in the 'integration-tests' channel.")
-      util.run("conan remove -f */integration-tests")
+      if args.clear_cache:
+          print("Removing all packages in the 'integration-tests' channel.")
+          util.run("conan remove -f */integration-tests")
       print("Exporting packages")
       with (scratch_folder_path / "conan_export.out" ).open('w') as f:
         pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
