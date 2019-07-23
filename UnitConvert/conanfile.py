@@ -15,18 +15,17 @@ class ConanPackage(ConanFile):
     generators = "cmake", "virtualenv"
     requires = 'boost/1.69.0@conan/stable'
     build_requires = 'cmake_installer/3.13.0@conan/stable'
+    settings = "os", "compiler", "build_type", "arch"
 
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
     def build(self):
-        if not self.develop:
-          tools.replace_in_file(os.path.join(self.source_folder, self.name, 'CMakeLists.txt'),
-                                f'project({self.name})',
-                                f'project({self.name})\nset(STANDALONE OFF)')
         cmake = CMake(self)
         defs = {}
+        if not self.develop:
+          defs['BUILD_UNIT_TESTS'] = False
         cmake.configure(source_folder=self.name,defs=defs)
         cmake.build()
 

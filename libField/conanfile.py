@@ -15,6 +15,7 @@ class ConanPackage(ConanFile):
     generators = "cmake", "virtualenv"
     requires = 'boost/1.69.0@conan/stable'
     build_requires = 'cmake_installer/3.13.0@conan/stable'
+    settings = "os", "compiler", "build_type", "arch"
 
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
