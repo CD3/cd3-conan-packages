@@ -165,8 +165,16 @@ class Package:
     self.dependencies = d.get("dependencies", self.dependencies)
 
   @property
+  def conan_package_name_and_version(self):
+    return f"{self.name}/{self.version}"
+
+  @property
+  def conan_package_owner_and_channel(self):
+    return f"{self.owner}/{self.channel}"
+
+  @property
   def conan_package_reference(self):
-    return f"{self.name}/{self.version}@{self.owner}/{self.channel}"
+    return f"{self.conan_package_name_and_version}@{self.conan_package_owner_and_channel}"
 
   @property
   def id(self):
@@ -202,20 +210,37 @@ class Package:
         return
 
       nonlocal conanfile_text
-      regex = re.compile(fr"^(\s*){key}\s*=\s*.*",re.MULTILINE)
+
+      # first try to replace a setting named 'injected_{key}'
+      # if that succeeds, then return to caller. if it does not
+      # suceed, then try to replace the actual setting name
+      # this gives the conan recipie a way to opt-out of having
+      # a setting overwritten
+      regex = re.compile(fr"^(\s*)injected_{key}\s*=\s*.*",re.MULTILINE)
       msg = "Note: this line was modified to make sure this setting is static."
-      text,n = re.subn( regex, fr"\1{key} = '{value}' # {msg}", conanfile_text)
-      if n < 1:
-        print(
-              WARN
-              + f"Could not replace '{key}'. Parameter *must* be define a variable named '{self.baseline_conanfile}' file to replace."
-              + EOL )
+      text,n = re.subn( regex, fr"\1injected_{key} = '{value}' # {msg}", conanfile_text)
 
       if n > 1:
         print(
               WARN
-              + f"Replaced more than one instance of '{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
+              + f"Replaced more than one instance of 'injected_{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
               + EOL )
+
+      if n < 1:
+        regex = re.compile(fr"^(\s*){key}\s*=\s*.*",re.MULTILINE)
+        msg = "Note: this line was modified to make sure this setting is static."
+        text,n = re.subn( regex, fr"\1{key} = '{value}' # {msg}", conanfile_text)
+        if n < 1:
+          print(
+                WARN
+                + f"Could not replace '{key}'. Parameter *must* be define a variable named '{self.baseline_conanfile}' file to replace."
+                + EOL )
+
+        if n > 1:
+          print(
+                WARN
+                + f"Replaced more than one instance of '{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
+                + EOL )
       
 
       conanfile_text = text
@@ -249,7 +274,7 @@ class Package:
 
   def export(self, stdout=None):
     self.write_instance_conanfile()
-    rc = run(f'''conan export "{self.instance_conanfile}" "{self.conan_package_reference}" ''', stdout, stdout)
+    rc = run(f'''conan export "{self.instance_conanfile}" "{self.conan_package_owner_and_channel}" ''', stdout, stdout)
     if rc != 0:
       print(ERROR)
       print(f"There was an error exporting {self.name}.")
