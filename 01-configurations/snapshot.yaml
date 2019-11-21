@@ -5,6 +5,6 @@ package_instances:
 # Note, order matters here. the last instance of each package will be injected into the others.
 # If a packages needs an earlier version, it should be listed in the dependencies section.
   - name : UnitConvert
-    version : 0.3
-    checkout : 0.3
+    version : 0.5
+    checkout : 0.5
     baseline_conanfile : ./UnitConvert/conanfile.py
