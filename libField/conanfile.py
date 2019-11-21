@@ -13,7 +13,7 @@ class ConanPackage(ConanFile):
     topics = ("C++", "Physics")
 
     generators = "cmake", "virtualenv"
-    requires = 'boost/1.69.0@conan/stable'
+    requires = 'boost/1.69.0@conan/stable', 'hdf5/1.10.5@cd3/devel'
     settings = "os", "compiler", "build_type", "arch"
 
     def source(self):
