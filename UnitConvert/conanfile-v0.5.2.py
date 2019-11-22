@@ -4,8 +4,8 @@ import os, glob
 class ConanPackage(ConanFile):
     name = 'UnitConvert' # Note: this line was modified to make sure this setting is static.
     git_url_basename = 'git://github.com/CD3' # Note: this line was modified to make sure this setting is static.
-    version = '0.5.1' # Note: this line was modified to make sure this setting is static.
-    checkout = '0.5.1' # Note: this line was modified to make sure this setting is static.
+    version = '0.5.2' # Note: this line was modified to make sure this setting is static.
+    checkout = '0.5.2' # Note: this line was modified to make sure this setting is static.
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for runtime unit conversions."
