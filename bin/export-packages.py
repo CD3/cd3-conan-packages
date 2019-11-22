@@ -1,4 +1,18 @@
 #! /usr/bin/python3
+"""
+Export conan packages to the local cache. DOES NOT PERFORM ANY TESTING.
+
+Usage:
+  export-packages.py [options] [<config_file> ...]
+  export-packages.py (-h|--help)
+
+Options:
+  -h,--help   This help message.
+  --print-default-configuration  Print the default configuration that will be used.
+  --print-configuration  Print the actual configuration that will be used.
+"""
+import docopt
+args = docopt.docopt( __doc__ )
 
 import glob
 import os
@@ -11,26 +25,8 @@ from pathlib import Path
 
 import util
 
-from argparse import ArgumentParser
 
-parser = ArgumentParser(description="Export conan packages to the local cache. Does not perform any testing.")
-parser.add_argument(
-    "configuration",
-    action="store",
-    nargs='*',
-    help="File contianing configurations to export.")
-parser.add_argument(
-    "--print-default-configuration",
-    action='store_true',
-    help="Print the default configuration.")
-parser.add_argument(
-    "--print-configuration",
-    action='store_true',
-    help="Print the configuration that will be used..")
-parser.set_defaults(parallel=True)
-args = parser.parse_args()
-
-prog_path = Path(parser.prog)
+prog_path = Path(sys.argv[0]).resolve()
 
 
 package_paths = [Path(file).parent for file in Path.cwd().glob("*/conanfile.py")]
@@ -49,18 +45,18 @@ package_defaults:
   scratch-folder : "_package-exports.d"
 '''
   pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
-  if args.print_default_configuration:
+  if args['--print-default-configuration']:
     print("# Default Configuration")
     print(yaml.dump(pc.config))
     sys.exit(0)
 
-  for file in args.configuration:
+  for file in args['<config_file>']:
     pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
   if not 'package_instances' in pc.config:
     pc.add_from_conan_recipe_collection(".")
 
-  if args.print_configuration:
+  if args['--print-configuration']:
     print("# Complete Configuration")
     print(yaml.dump(pc.config))
     sys.exit(0)

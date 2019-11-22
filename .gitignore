@@ -1,4 +1,5 @@
 conanfile-*.py
 _*.d/
 __pycache__/
+*/test_package/build/
 

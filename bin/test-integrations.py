@@ -1,5 +1,36 @@
 #! /usr/bin/python3
 
+"""
+Test conan-based build of packages.
+
+This script will export each of the packages in the repository to the local cache and then attempt to them and run their unit tests.
+This is useful for testing that the latest commits on a given component did not break any of the components that depend on it. For example,
+if libField is updated, this script will run an verify that all of the packages dependeing on libMPE can still build and pass their unit tests.
+
+Usage:
+  test-integrations.py (-h|--help)
+  test-integrations.py [--test <name>]... [--profile <name>]... [options] [<config_file>...]
+  test-integrations.py [options] [<config_file>...]
+
+Arguments:
+  <config_file>                   File(s) containing configurations to test.
+
+Options:
+  -h,--help                       This help message
+  --no-unit-tests                 Do not run unit tests during package testing.
+  --print-default-configuration   Print the default configuration.
+  --print-configuration           Print the configuration that will be used.
+  -t <name>,--test <name>         List of packages to test. This will override any packages specified in the configuration file.
+  -p <name>,--profile <name>      Conan profile to use for testing.
+  --skip-export                   Skip exporting packages and just run tests.
+  --no-clear-cache                Do not clear the cache before exporting packages.
+"""
+
+import docopt
+args = docopt.docopt(__doc__, version='x.x')
+
+
+
 import glob
 import os
 import stat
@@ -13,72 +44,8 @@ from pathlib import Path
 
 import util
 
-from argparse import ArgumentParser
 
-parser = ArgumentParser(description="Test conan-based build of packages.")
-parser.add_argument(
-    "configuration",
-    action="store",
-    nargs="*",
-    help="File(s) contianing configurations to test.",
-)
-parser.add_argument(
-    "--unit-tests", dest="do_unit_tests", action="store_true", help="Attempt to run the unit tests for all packages being tested after they are built."
-)
-parser.add_argument(
-    "--no-unit-tests",
-    dest="do_unit_tests",
-    action="store_false",
-    help="Do not run unit tests during package testing.",
-)
-parser.add_argument(
-    "--print-default-configuration",
-    action="store_true",
-    help="Print the default configuration.",
-)
-parser.add_argument(
-    "--print-configuration",
-    action="store_true",
-    help="Print the configuration that will be used..",
-)
-parser.add_argument(
-    "--test", "-t",
-    action="append",
-    help="Packages to test. This will override any packages specified in the configuration file.",
-)
-parser.add_argument(
-    "--profile","-p",
-    action="append",
-    default=[],
-    help="Conan profile",
-)
-parser.add_argument(
-    "--skip-export",
-    action="store_true",
-    help="Skip exporting packages and just run tests.",
-)
-
-parser.add_argument(
-    "--clear-cache",
-    dest="clear_cache",
-    action="store_true",
-    default=True,
-    help="Clear the cache before exporting packages.",
-)
-
-parser.add_argument(
-    "--no-clear-cache",
-    dest="clear_cache",
-    action="store_false",
-    default=True,
-    help="Do not clear the cache before exporting packages.",
-)
-
-parser.set_defaults(parallel=True)
-parser.set_defaults(do_unit_tests=True)
-args = parser.parse_args()
-
-prog_path = Path(parser.prog)
+prog_path = Path(sys.argv[0]).resolve()
 
 
 def test_package(package, do_unit_tests=True):
@@ -86,7 +53,7 @@ def test_package(package, do_unit_tests=True):
     source_dir = Path(".")
     build_dir = source_dir / (package.name + ".build")
     outfile = Path(f"{package.name}.out")
-    profile_opts = " ".join([ f'-p "{p}"' for p in args.profile])
+    profile_opts = " ".join([ f'-p "{p}"' for p in args['--profile']])
 
     with open(outfile, "w") as f:
 
@@ -191,16 +158,16 @@ if __name__ == "__main__":
     scratch-folder : "_{prog_path.stem}.d"
   '''
     pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
-    if args.print_default_configuration:
+    if args['--print-default-configuration']:
       print("# Default Configuration")
       print(yaml.dump(pc.config))
       sys.exit(0)
 
-    for file in args.configuration:
+    for file in args['<config_file>']:
       pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
     pc.add_from_conan_recipe_collection(".")
-    if args.print_configuration:
+    if args['--print-configuration']:
       print("# Complete Configuration")
       print(yaml.dump(pc.config))
       sys.exit(0)
@@ -216,10 +183,10 @@ if __name__ == "__main__":
 
 
     
-    if args.skip_export:
+    if args['--skip-export']:
       print("Skipping export step. Packages currently in the local cache will be tested.")
     else:
-      if args.clear_cache:
+      if not args['--no-clear-cache']:
           print("Removing all packages in the 'integration-tests' channel.")
           util.run("conan remove -f */integration-tests")
       print("Exporting packages")
@@ -229,14 +196,14 @@ if __name__ == "__main__":
 
 
 
-    if args.test:
-      packages_to_test = util.filter_packages( {'include' : args.test }, pc.packages )
+    if args['--test']:
+      packages_to_test = util.filter_packages( {'include' : args['--test'] }, pc.packages )
     else:
       packages_to_test = util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.packages )
 
     print(util.EMPH+"Testing packages: " + ", ".join([p.name for p in packages_to_test])+util.EOL)
     with util.working_directory(scratch_folder_path):
-      results = [test_package(package, args.do_unit_tests) for package in packages_to_test]
+      results = [test_package(package, not args['--no-unit-tests']) for package in packages_to_test]
     print("Done")
 
     num_tests = len(results)
