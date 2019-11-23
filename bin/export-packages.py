@@ -1,15 +1,18 @@
 #! /usr/bin/python3
 """
-Export conan packages to the local cache. DOES NOT PERFORM ANY TESTING.
+Export conan packages to the local cache.
 
 Usage:
   export-packages.py [options] [<config_file> ...]
   export-packages.py (-h|--help)
 
 Options:
-  -h,--help   This help message.
-  --print-default-configuration  Print the default configuration that will be used.
-  --print-configuration  Print the actual configuration that will be used.
+  -h,--help                       This help message.
+  --print-default-configuration   Print the default configuration that will be used.
+  --print-configuration           Print the actual configuration that will be used.
+  -b,--build                      Build packages after they are installed.
+  -t,--test                       Test package after it is installed.
+  -n,--no-export                  Don't export packages. Can be used to skip export step and just build or test.
 """
 import docopt
 args = docopt.docopt( __doc__ )
@@ -67,11 +70,23 @@ package_defaults:
   scratch_folder_path.mkdir()
 
 
-  print("Exporting packages")
-  with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
-    pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
-  print("Done")
+  if not args["--no-export"]:
+    print("Exporting packages")
+    with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
+      pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+    print("Done")
 
+  if args["--build"]:
+    print("Building packages")
+    with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_build.out" ).open('w') as f:
+      pc.build_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+    print("Done")
+
+  if args["--test"]:
+    print("Testing packages")
+    with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_test.out" ).open('w') as f:
+      pc.test_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+    print("Done")
 
 
 

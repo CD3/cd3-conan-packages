@@ -125,7 +125,6 @@ class Package:
     self.clear()
 
   def clear(self):
-    self.path = None
     self.baseline_conanfile = None
     self.git_url_basename = None
     self.repo_name = None
@@ -284,6 +283,33 @@ class Package:
       return 1
     return 0
 
+  def build(self, stdout=None):
+    rc = run(f'''conan install "{self.conan_package_reference}" --build="{self.name}" ''', stdout, stdout)
+    if rc != 0:
+      print(ERROR)
+      print(f"There was an error building {self.name}.")
+      if stdout is not None:
+        print(f"You can view the output in {Path(stdout.name).resolve()}." )
+      print(EOL)
+      return 1
+    return 0
+
+  def test(self, stdout=None):
+    test_folder = self.instance_conanfile_path.parent / "test_package"
+    if test_folder.is_dir():
+      rc = run(f'''conan test "{str(test_folder)}" "{self.conan_package_reference}"''', stdout, stdout)
+      if rc != 0:
+        print(ERROR)
+        print(f"There was an error testing {self.name}.")
+        if stdout is not None:
+          print(f"You can view the output in {Path(stdout.name).resolve()}." )
+        print(EOL)
+        return 1
+      return 0
+    else:
+      print(f"WARNING: no 'test_folder' found for {self.name} (looking for {str(test_folder)}). Package will not be tested")
+
+
 
 
 
@@ -373,6 +399,16 @@ class PackageCollection:
       pks = filter_packages(config,self.packages)
       for p in pks:
         p.export(stdout)
+
+    def build_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.packages)
+      for p in pks:
+        p.build(stdout)
+
+    def test_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.packages)
+      for p in pks:
+        p.test(stdout)
 
 
 
