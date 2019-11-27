@@ -8,3 +8,18 @@ package_instances:
     version : 0.5.2
     checkout : 0.5.2
     baseline_conanfile : ./UnitConvert/conanfile.py
+  - name : libIntegrate
+    version : 0.3.3
+    checkout : v0.3.3
+    baseline_conanfile : ./libIntegrate/conanfile.py
+  - name : libInterpolate
+    version : 2.2
+    checkout : 2.2
+    baseline_conanfile : ./libInterpolate/conanfile.py
+  - name : libField
+    version : 0.7
+    checkout : 0.7
+    baseline_conanfile : ./libField/conanfile.py
+  - name : hdf5
+    version : 1.10.5
+    baseline_conanfile : ./hdf5/conanfile.py
