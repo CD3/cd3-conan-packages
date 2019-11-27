@@ -15,9 +15,9 @@ class ConanPackage(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"mpi" : [True,False] }
 
-    requires = "boost/1.69.0@conan/stable"
+    requires = "boost/1.66.0@conan/stable", "lapack/3.7.1@conan/stable"
 
-    default_options = {"boost:shared":True, "mpi":False}
+    default_options = {"boost:shared":False, "mpi":False}
 
     def source(self):
         vmajor, vminor, vpatch = self.version.split(".")
@@ -28,6 +28,12 @@ class ConanPackage(ConanFile):
         next(pathlib.Path(".").glob("dakota-*.src")).rename("dakota.src")
 
     def build(self):
+        # dakota tries to find system installs for blas and lapack with find_library(...) first
+        # if it does not find them, it then calls find_package(...)
+        # we want to make sure the conan package version is used, so we need to remove the system library checks
+        cmakefile = pathlib.Path(self.source_folder) / "dakota.src/CMakeLists.txt"
+        tools.replace_in_file(str(cmakefile), f'find_library(BLAS_LIBS blas)','')
+        tools.replace_in_file(str(cmakefile), f'find_library(LAPACK_LIBS lapack)','')
         cmake = CMake(self)
         defs = dict()
         # these options are listed in Dakota's build
@@ -39,6 +45,8 @@ class ConanPackage(ConanFile):
         # defs['MPI_CXX_COMPILER'] = "/path/to/mpicxx"
         # defs['Trilinos_DIR'] = "/path/to/Trilinos/install"
         defs['CMAKE_INSTALL_PREFIX'] = self.package_folder
+        # make sure cmake can find the conan-installed lapack
+        defs['LAPACK_DIR'] = next((pathlib.Path(self.deps_cpp_info['lapack'].rootpath) / "lib/cmake/").glob("lapack-*"))
 
         cmake.configure(source_folder="dakota.src", defs=defs)
         cmake.build()
