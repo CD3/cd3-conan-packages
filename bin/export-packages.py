@@ -2,6 +2,55 @@
 """
 Export conan packages to the local cache.
 
+This script exports conan recipes to the local cache by default. Consumers
+can then use the packages, but must specify `--build missing` the first time
+they install.
+
+If the --build option is given, then the packages will be built by calling `conan install`
+after they are exported. In this case, consumers can use the package without specifying `--build missing`.
+
+Package details (owner, channel, version, etc) have default values, but can be overriden with a YAML configuration
+file. Use --print-default-configuration to see the default configuration values.
+
+Here is an example configuration.
+
+export-packages:
+  packages_to_export: all
+  scratch-folder: _package-exports.d
+package_defaults:
+  channel: devel
+  checkout: master
+  git_url_basename: git://github.com/CD3
+  owner: cd3
+  version: master
+package_instances:
+- baseline_conanfile: ./UnitConvert/conanfile.py
+  checkout: 0.5.2
+  name: UnitConvert
+  version: 0.5.2
+
+The `export-packages` section provides configuration parameters for this script.
+The `package_defaults` section provides default values for each package.
+The `package_instances` section provides overrides for each package.
+
+Package configuration parameters:
+
+  name  The package name.
+  baseline_conanfile  A recipe file that will be used as a template for the package.
+  git_url_basename  The git repository basename (git repo url minus the package name) were the package source can be downloaded.
+  checkout  The git commit that should be checked out before building the package.
+  version  The package version number.
+  channel  The package channel.
+  owner  The package owner.
+
+This script will use the recipe specified by `baseline_conanfile` and inject configuration parameters to create
+an instance conanfile.py that will be used to build the package. This means you can write a conanfile.py with default
+values that will work on its own, and use this script to create different variations (obtain the source from a different repository, checkout
+a different commit, etc).
+
+The package references exported to the local cache will be '{name}/{version}@{owner}/{channel}'. By default, all packages will
+be exported with the same owner and channel, but this can be overridden on a per-package basis. 
+
 Usage:
   export-packages.py [options] [<config_file> ...]
   export-packages.py (-h|--help)
