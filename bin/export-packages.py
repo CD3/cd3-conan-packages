@@ -52,8 +52,9 @@ The package references exported to the local cache will be '{name}/{version}@{ow
 be exported with the same owner and channel, but this can be overridden on a per-package basis. 
 
 Usage:
-  export-packages.py [options] [<config_file> ...]
   export-packages.py (-h|--help)
+  export-packages.py [--package <name>]... [options] [<config_file> ...]
+  export-packages.py [options] [<config_file> ...]
 
 Options:
   -h,--help                       This help message.
@@ -62,6 +63,7 @@ Options:
   -b,--build                      Build packages after they are installed.
   -t,--test                       Test package after it is installed.
   -n,--no-export                  Don't export packages. Can be used to skip export step and just build or test.
+  -p <name>,--package <name>      Name of package(s) to export. This will override the list of packages specified in the config file.
 """
 import docopt
 args = docopt.docopt( __doc__ )
@@ -118,23 +120,27 @@ package_defaults:
     shutil.rmtree(str(scratch_folder_path))
   scratch_folder_path.mkdir()
 
+  if args['--package']:
+    packages_to_export = [ p.name for p in util.filter_packages( {'include' : args['--package'] }, pc.packages ) ]
+  else:
+    packages_to_export = [ p.name for p in util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.packages ) ]
 
   if not args["--no-export"]:
     print("Exporting packages")
     with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
-      pc.export_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+      pc.export_packages( config=packages_to_export, stdout = f)
     print("Done")
 
   if args["--build"]:
     print("Building packages")
     with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_build.out" ).open('w') as f:
-      pc.build_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+      pc.build_packages( config=packages_to_export, stdout = f)
     print("Done")
 
   if args["--test"]:
     print("Testing packages")
     with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_test.out" ).open('w') as f:
-      pc.test_packages( config=pc.config[prog_path.stem].get("packages_to_export", "all"), stdout = f)
+      pc.test_packages( config=packages_to_export, stdout = f)
     print("Done")
 
 
