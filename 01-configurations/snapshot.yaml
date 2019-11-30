@@ -25,3 +25,4 @@ package_instances:
     baseline_conanfile : ./hdf5/conanfile.py
   - name : dakota_installer
     baseline_conanfile : ./dakota_installer/conanfile.py
+    version : 6.10.0
