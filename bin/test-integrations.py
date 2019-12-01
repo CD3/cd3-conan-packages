@@ -1,41 +1,8 @@
 #! /usr/bin/python3
 
-"""
-Test conan-based build of packages.
-
-This script will export each of the packages in the repository to the local cache and then attempt to them and run their unit tests.
-This is useful for testing that the latest commits on a given component did not break any of the components that depend on it. For example,
-if libField is updated, this script will run an verify that all of the packages dependeing on libMPE can still build and pass their unit tests.
-
-Usage:
-  test-integrations.py (-h|--help)
-  test-integrations.py [--test <name>]... [--profile <name>]... [options] [<config_file>...]
-  test-integrations.py [options] [<config_file>...]
-
-Arguments:
-  <config_file>                   File(s) containing configurations to test.
-
-Options:
-  -h,--help                       This help message
-  --no-unit-tests                 Do not run unit tests during package testing.
-  --print-default-configuration   Print the default configuration.
-  --print-configuration           Print the configuration that will be used.
-  -t <name>,--test <name>         List of packages to test. This will override any packages specified in the configuration file.
-  -p <name>,--profile <name>      Conan profile to use for testing.
-  --skip-export                   Skip exporting packages and just run tests.
-  --no-clear-cache                Do not clear the cache before exporting packages.
-"""
-
-import docopt
-args = docopt.docopt(__doc__, version='x.x')
-
-
-
 import glob
 import os
 import stat
-import subprocess
-import multiprocessing
 import shutil
 import sys
 import yaml
@@ -44,16 +11,18 @@ from pathlib import Path
 
 import util
 
+import click
+
 
 prog_path = Path(sys.argv[0]).resolve()
 
 
-def test_package(package, do_unit_tests=True):
+def test_package(package, profiles, do_unit_tests=True):
     conanfile = package.instance_conanfile
     source_dir = Path(".")
     build_dir = source_dir / (package.name + ".build")
     outfile = Path(f"{package.name}.out")
-    profile_opts = " ".join([ f'-p "{p}"' for p in args['--profile']])
+    profile_opts = " ".join([ f'-p "{p}"' for p in profiles])
 
     with open(outfile, "w") as f:
 
@@ -130,7 +99,23 @@ def test_package(package, do_unit_tests=True):
 
 
 package_paths = [Path(file).parent for file in Path.cwd().glob("*/conanfile.py")]
-if __name__ == "__main__":
+@click.command()
+@click.option("--print-default-configuration",  help ="Print the default configuration.",is_flag=True)
+@click.option("--print-configuration",          help ="Print the configuration that will be used.",is_flag=True)
+@click.option("-t","--test",                    help ="List of packages to test. Thsi will override any packages specified in the configuration file.",multiple=True)
+@click.option("-p","--profile",                 help ="Conan profile(s) to use for testing.",multiple=True)
+@click.option("--unit-tests/--no-unit-tests",   help ="Run unit tests for a package during testing.")
+@click.option("--skip-export/--no-skip-export", help ="Skip exporting all recipes to local cache before testing.",default=False)
+@click.option("--clear-cache/--no-clear-cache", help ="Clear local cache before exporting recipies.",default=True)
+@click.argument("config_file",nargs=-1)
+def main(print_default_configuration,print_configuration,test,profile,unit_tests,skip_export,clear_cache,config_file):
+    """
+    Test conan-based build of packages.
+
+    This script will export each of the packages in the repository to the local cache and then attempt to them and run their unit tests.
+    This is useful for testing that the latest commits on a given component did not break any of the components that depend on it. For example,
+    if libField is updated, this script will run an verify that all of the packages dependeing on libMPE can still build and pass their unit tests.
+    """
 
     pc = util.PackageCollection()
     default_configuration_text = f'''
@@ -158,16 +143,16 @@ if __name__ == "__main__":
     scratch-folder : "_{prog_path.stem}.d"
   '''
     pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
-    if args['--print-default-configuration']:
+    if print_default_configuration:
       print("# Default Configuration")
       print(yaml.dump(pc.config))
       sys.exit(0)
 
-    for file in args['<config_file>']:
+    for file in config_file:
       pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
     pc.add_from_conan_recipe_collection(".")
-    if args['--print-configuration']:
+    if print_configuration:
       print("# Complete Configuration")
       print(yaml.dump(pc.config))
       sys.exit(0)
@@ -183,10 +168,10 @@ if __name__ == "__main__":
 
 
     
-    if args['--skip-export']:
+    if skip_export:
       print("Skipping export step. Packages currently in the local cache will be tested.")
     else:
-      if not args['--no-clear-cache']:
+      if clear_cache:
           print("Removing all packages in the 'integration-tests' channel.")
           util.run("conan remove -f */integration-tests")
       print("Exporting packages")
@@ -196,14 +181,14 @@ if __name__ == "__main__":
 
 
 
-    if args['--test']:
-      packages_to_test = util.filter_packages( {'include' : args['--test'] }, pc.packages )
+    if test:
+      packages_to_test = util.filter_packages( {'include' : list(test) }, pc.packages )
     else:
       packages_to_test = util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.packages )
 
     print(util.EMPH+"Testing packages: " + ", ".join([p.name for p in packages_to_test])+util.EOL)
     with util.working_directory(scratch_folder_path):
-      results = [test_package(package, not args['--no-unit-tests']) for package in packages_to_test]
+      results = [test_package(package, profile, unit_tests) for package in packages_to_test]
     print("Done")
 
     num_tests = len(results)
@@ -215,3 +200,6 @@ if __name__ == "__main__":
         print(str(num_failed) + " Failed")
     else:
         print("All Tests Passed")
+
+if __name__ == "__main__":
+  main()

@@ -9,7 +9,7 @@ verify_ssl = true
 pyyaml = "*"
 pyparsing = "*"
 conan = "*"
-docopt = "*"
+click = "*"
 
 [requires]
 python_version = "3.6"
