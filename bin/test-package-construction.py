@@ -4,12 +4,13 @@ import subprocess
 import click
 
 @click.command()
+@click.option("-d","--tmp-directory",  help="Name of temperary directory to use for package construction.",default="_tmp")
 @click.option("-s","--source",  help="Run the 'conan source' step.",is_flag=True)
 @click.option("-i","--install", help="Run the 'conan install' step.",is_flag=True)
 @click.option("-b","--build",   help="Run the 'conan build' step.",is_flag=True)
 @click.option("-p","--package", help="Run the 'conan package' step.",is_flag=True)
 @click.argument("conanfile_file_or_dir",type=click.Path())
-def main(source,install,build,package,conanfile_file_or_dir):
+def main(tmp_directory,source,install,build,package,conanfile_file_or_dir):
   """
   Run steps to create a for a conan package locally.
 
@@ -40,7 +41,7 @@ def main(source,install,build,package,conanfile_file_or_dir):
 
   package_name = str(conanfile.parent.stem)
 
-  tmp_dir = pathlib.Path("_tmp")
+  tmp_dir = pathlib.Path(tmp_directory)
   source_dir=tmp_dir/f"{package_name}-source.d"
   build_dir=tmp_dir/f"{package_name}-build.d"
   package_dir=tmp_dir/f"{package_name}-package.d"
