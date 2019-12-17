@@ -2,7 +2,8 @@ from conans import ConanFile, CMake, tools
 import os, glob, pathlib
 
 class ConanPackage(ConanFile):
-    name = "UnitConvertGui"
+    proj_name = "UnitConvertGui"
+    name = f"{proj_name}_installer"
     git_url_basename = "git://github.com/CD3"
     version = "master"
     checkout = "master"
@@ -21,9 +22,9 @@ class ConanPackage(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def source(self):
-        self.run(f"git clone {self.git_url_basename}/{self.name}")
-        self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
-        pathlib.Path(f"{self.name}").rename(f"{self.src_dir}")
+        self.run(f"git clone {self.git_url_basename}/{self.proj_name}")
+        self.run(f"cd {self.proj_name} && git checkout {self.checkout} && git log -1")
+        pathlib.Path(f"{self.proj_name}").rename(f"{self.src_dir}")
 
     def build(self):
         cmake = CMake(self)
@@ -32,5 +33,4 @@ class ConanPackage(ConanFile):
         cmake.build()
 
     def package(self):
-      self.copy(self.name, dst="bin")
-
+      self.copy(self.proj_name, dst="bin")
