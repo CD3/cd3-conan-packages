@@ -3,4 +3,6 @@ _*.d/
 __pycache__/
 */test_package/build/
 _tmp*/
+.*.swp
+build/
 

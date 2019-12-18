@@ -136,6 +136,9 @@ class Package:
 
     self.dependencies = None
 
+    # self.setting_overrides = None
+    # self.dependency_overrides = None
+
   def load(self,d):
     '''Load a package configuration from a dict. All current settings are erased. Any settings not contained by the dict will be left uninitialized.'''
     self.clear()
@@ -390,7 +393,7 @@ class PackageCollection:
 
       if 'package_instances' not in self.config:
         self.config['package_instances'] = []
-      for file in cwd.glob( '*/conanfile.py' ):
+      for file in cwd.glob( 'recipes/*/conanfile.py' ):
         self.config['package_instances'].append( { 'name': file.parent.name, 'baseline_conanfile' : str(file.absolute()) } )
 
       self.load() # recreate packages
