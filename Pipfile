@@ -10,6 +10,7 @@ pyyaml = "*"
 pyparsing = "*"
 conan = "*"
 click = "*"
+libcst = "*"
 
 [requires]
 python_version = "3.6"

@@ -116,7 +116,7 @@ package_defaults:
   if export:
     print("Exporting packages")
     with (Path(pc.config[prog_path.stem]["scratch-folder"]) / "conan_export.out" ).open('w') as f:
-      pc.export_packages( config=packages_to_export, stdout = f)
+      pc.export_baseline_packages( config=packages_to_export, stdout = f)
     print("Done")
 
   if build:

@@ -274,7 +274,18 @@ class Package:
 
     conanfile.write_text( conanfile_text )
 
-  def export(self, stdout=None):
+  def export_baseline(self, stdout=None):
+    rc = run(f'''conan export "{self.baseline_conanfile}" "{self.conan_package_owner_and_channel}" ''', stdout, stdout)
+    if rc != 0:
+      print(ERROR)
+      print(f"There was an error exporting {self.name}.")
+      if stdout is not None:
+        print(f"You can view the output in {Path(stdout.name).resolve()}." )
+      print(EOL)
+      return 1
+    return 0
+
+  def export_instance(self, stdout=None):
     self.write_instance_conanfile()
     rc = run(f'''conan export "{self.instance_conanfile}" "{self.conan_package_owner_and_channel}" ''', stdout, stdout)
     if rc != 0:
@@ -398,10 +409,15 @@ class PackageCollection:
 
       self.load() # recreate packages
 
-    def export_packages(self,config='all',stdout=None):
+    def export_baseline_packages(self,config='all',stdout=None):
       pks = filter_packages(config,self.packages)
       for p in pks:
-        p.export(stdout)
+        p.export_baseline(stdout)
+
+    def export_instance_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.packages)
+      for p in pks:
+        p.export_instance(stdout)
 
     def build_packages(self,config='all',stdout=None):
       pks = filter_packages(config,self.packages)
