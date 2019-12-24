@@ -11,6 +11,8 @@ pyparsing = "*"
 conan = "*"
 click = "*"
 libcst = "*"
+pytest = "*"
+fspathdict = "*"
 
 [requires]
 python_version = "3.6"

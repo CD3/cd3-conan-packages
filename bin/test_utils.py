@@ -5,79 +5,47 @@ import yaml
 import pytest
 from pathlib import Path
 
-def test_Package_configuration():
+def test_PackageInstance_configuration():
 
   config = {"key" : "val"}
 
-  p = util.Package()
+  p = util.PackageInstance()
 
   p.load(config)
 
-  assert( p.name is None )
+  assert( p.conanfile is None )
+  assert( p.setting_overrides is None )
+  assert( p.dependency_overrides is None )
 
-  config["name"] = "MyPackage"
+  config["conanfile"] = "MyPackage.py"
 
   p.update(config)
 
-  assert p.name == "MyPackage"
-  assert p.version  is None
+  assert p.conanfile == "MyPackage.py"
+  assert( p.setting_overrides is None )
+  assert( p.dependency_overrides is None )
 
-  config = {"version" : "2.0"}
-
-  p.load(config)
-  assert p.name is None
-  assert p.version == "2.0"
-
-  config = {"version" : "2.0",
-            'dependencies' : ["PackageA/1.0@initech/stable","PackageB/2.3@initech/devel"]}
+  config = {"setting_overrides" : {"name": "MyPackage"} }
 
   p.load(config)
-  assert p.name is None
-  assert p.version == "2.0"
-  assert len(p.dependencies) == 2
-  assert p.dependencies[0] == "PackageA/1.0@initech/stable"
-  assert p.dependencies[1] == "PackageB/2.3@initech/devel"
+  assert p.conanfile is None
+  assert isinstance( p.setting_overrides, dict)
+  assert len(p.setting_overrides) == 1
+  assert "name" in p.setting_overrides
+  assert p.setting_overrides["name"] == "MyPackage"
 
-def test_Package_conan_package_reference():
-  config = {"name" : "MyPackage",
-            "version" : "2.0",
-            "group" : "Initech",
-            "channel" : "unstable" }
 
-  p = util.Package()
+  config = {"conanfile":"MyPackage.py", "setting_overrides" : {"name": "MyPackage"}, "dependency_overrides": ["MyDep/*@cd3/testing"] }
+
   p.load(config)
+  assert p.conanfile == "MyPackage.py"
+  assert "name" in p.setting_overrides
+  assert len(p.dependency_overrides) > 0
 
-  assert p.conan_package_reference == "MyPackage/2.0@Initech/unstable"
 
-  assert p.id is not None
-  id = p.id
-  assert type(id) == str
-  assert p.id == id
+def test_PackageInstance_write_conanfile():
 
-  pp = util.Package()
-  pp.load(config)
-
-  assert pp.id == p.id
-
-  p.update({"name":"myPackage"})
-
-  assert p.id != id
-
-  p.update({"name":"MyPackage"})
-
-  assert p.id == id
-
-  p.update({"repo_name":"example.com"})
-
-  assert p.id != id
-
-  p.update({"repo_name":None})
-
-  assert p.id == id
-
-def test_Package_write_conanfile():
-
-  baseline_conanfile_text = '''
+  conanfile_text = '''
 from conans import ConanFile, CMake
 import os, glob
 
@@ -105,54 +73,57 @@ class ConanPackage(ConanFile):
       pass
 '''
 
-  def setting_regex(setting,value):
+  def setting_regex(setting,value,modified=True):
     # helper function that builds a regex to check that
     # a setting was written by the Package
-    return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*#.*$''',re.MULTILINE)
+    if modified:
+      return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*#.*$''',re.MULTILINE)
+    else:
+      return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*$''',re.MULTILINE)
 
   with util.in_temporary_directory() as d:
 
-    p = util.Package()
-    p.load( {"name" : "MyPackage",
-              "version" : "2.0",
-              "group" : "Initech",
-              "channel" : "unstable",
-              "conanfile" : "./conanfile.py",
-              "dependencies" : ["PackageA/2.0@initech/devel",
-                                     "boost/1.70@conan/stable",
-                                    ],
+    p = util.PackageInstance()
+    p.load( { "conanfile" : "./conanfile.py",
+              "setting_overrides" : {
+                "version" : "2.0",
+                "requires" : "boost/1.70@conan/stable"
+                },
             }
           )
 
     with open("conanfile.py",'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text)
    
     assert not p.instance_conanfile_path.is_file()
     p.write_instance_conanfile()
     assert p.instance_conanfile_path.is_file()
     text = p.instance_conanfile_path.read_text()
 
-    assert setting_regex("version","2.0").search(text)
-    assert re.compile(r'''^\s*checkout = "master"$''',re.MULTILINE).search(text)
+    assert setting_regex("name","Name Here",False).search(text)
+    assert setting_regex("version","2.0",True).search(text)
+    assert setting_regex("checkout","master",False).search(text)
     assert re.search("boost/1.70@conan/stable",text)
 
 
   with util.in_temporary_directory() as d:
 
-    p = util.Package()
-    p.load( {"name" : "my_project",
-              "version" : "2.0",
-              "group" : "Initech",
-              "channel" : "unstable",
-              "conanfile" : "./conanfile.py",
-              "checkout" : "v2.0",
-              "git_url_basename" : "git://example.com",
-              "repo_name" : "MyProject",
-              }
+    p = util.PackageInstance()
+    p.load( { "conanfile" : "./conanfile.py",
+              "setting_overrides" :
+               {"name" : "my_project",
+                "version" : "2.0",
+                "group" : "Initech",
+                "channel" : "unstable",
+                "checkout" : "v2.0",
+                "git_url_basename" : "git://example.com",
+                "repo_name" : "MyProject",
+               }
+             }
           )
 
     with open("conanfile.py",'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text)
    
     assert not p.instance_conanfile_path.is_file()
     p.write_instance_conanfile()
@@ -169,8 +140,8 @@ class ConanPackage(ConanFile):
 
 
 
-def test_Package_export_package():
-  baseline_conanfile_text = '''
+def test_PackageInstance_export_package():
+  conanfile_text = '''
 from conans import ConanFile, CMake
 import os, glob
 
@@ -199,86 +170,71 @@ class ConanPackage(ConanFile):
 
   with util.in_temporary_directory() as d:
 
-    p = util.Package()
-    p.load( {"name" : "MyPackage",
+    p = util.PackageInstance()
+    p.load( {"setting_overrides" : {
+              "name" : "MyPackage",
               "version" : "2.0",
-              "group" : "initech",
-              "channel" : "unstable",
-              "conanfile" : "./conanfile.py"}
+              },
+              "conanfile" : "./conanfile.py"
+              }
           )
 
     with open("conanfile.py",'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text)
 
     res = subprocess.run("conan remove -f MyPackage/*", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     with open("export.out",'w') as f:
-      p.export(f)
-    res = subprocess.run("conan search MyPackage", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      p.export(stdout=f,owner="initech",channel="unstable")
+    res = subprocess.run("conan search ", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     assert re.match( ".*MyPackage/2.0@initech/unstable", str(res.stdout) )
 
 
 def test_PackageCollection_configuration():
 
   config = yaml.load('''
-package_defaults:
-  owner : initech
-  channel : devel
-  version : devel
-  checkout : master
-package_overrides:
-  PackA:
-    version : master
+global:
+  export:
+    owner : initech
+    channel : devel
+  setting_overrides:
+    version : devel
+    checkout : master
 package_instances:
-  - name : PackA
-  - name : PackB
-    dependencies:
+  - conanfile: PackA/conanfile.py
+  - conanfile: PackB/conanfile.py
+    dependency_overrides:
       - 'PackA/2.6@initech/stable'
-  - name : PackC
-    version : '1.1'
-    checkout : 'v1.1'
-  - name : PackA
-    version : '2.6'
-    checkout : 'v2.6'
+  - conanfile : PackC/conanfile.py
+    setting_overrides:
+      version : '1.1'
+      checkout : 'v1.1'
+  - conanfile: PackA/conanfile.py
     channel : 'stable'
-    dependencies: []
+    setting_overrides:
+      version : '2.6'
+      checkout : 'v2.6'
   ''',Loader=yaml.SafeLoader)
 
   pc = util.PackageCollection()
 
   pc.load(config)
 
-  assert len(pc.packages) == 4
-  assert pc.packages[0].name == 'PackA'
-  assert pc.packages[0].owner  == 'initech'
-  assert pc.packages[0].channel == 'devel'
-  assert pc.packages[0].version == 'master'
-  assert pc.packages[0].checkout == 'master'
-  assert pc.packages[0].conan_package_reference == 'PackA/master@initech/devel'
-  assert len(pc.packages[0].dependencies) == 4
-  assert pc.packages[0].dependencies[0] == "PackA/master@initech/devel"
+  assert len(pc.package_instances) == 4
+  assert pc.package_instances[0].conanfile == 'PackA/conanfile.py'
+  assert pc.package_instances[0].setting_overrides['version'] == 'devel'
+  assert pc.package_instances[0].setting_overrides['checkout'] == 'master'
 
-  assert pc.packages[1].name == 'PackB'
-  assert pc.packages[1].owner  == 'initech'
-  assert pc.packages[1].channel == 'devel'
-  assert pc.packages[1].version == 'devel'
-  assert pc.packages[1].checkout == 'master'
-  assert len(pc.packages[1].dependencies) == 1
-  assert pc.packages[1].dependencies[0] == "PackA/2.6@initech/stable"
+  assert pc.package_instances[1].conanfile == 'PackB/conanfile.py'
+  assert pc.package_instances[1].setting_overrides['version'] == 'devel'
+  assert pc.package_instances[1].setting_overrides['checkout'] == 'master'
 
-  assert pc.packages[2].name == 'PackC'
-  assert pc.packages[2].owner  == 'initech'
-  assert pc.packages[2].channel == 'devel'
-  assert pc.packages[2].version == '1.1'
-  assert pc.packages[2].checkout == 'v1.1'
-  assert len(pc.packages[2].dependencies) == 4
-  assert pc.packages[2].dependencies[0] == "PackA/master@initech/devel"
+  assert pc.package_instances[2].conanfile == 'PackC/conanfile.py'
+  assert pc.package_instances[2].setting_overrides['version'] == '1.1'
+  assert pc.package_instances[2].setting_overrides['checkout'] == 'v1.1'
 
-  assert pc.packages[3].name == 'PackA'
-  assert pc.packages[3].owner  == 'initech'
-  assert pc.packages[3].channel == 'stable'
-  assert pc.packages[3].version == '2.6'
-  assert pc.packages[3].checkout == 'v2.6'
-  assert len(pc.packages[3].dependencies) == 0
+  assert pc.package_instances[3].conanfile == 'PackA/conanfile.py'
+  assert pc.package_instances[3].setting_overrides['version'] == '2.6'
+  assert pc.package_instances[3].setting_overrides['checkout'] == 'v2.6'
 
 
 
@@ -286,14 +242,13 @@ package_instances:
 
 def test_PackageCollection_build():
   config = yaml.load('''
-package_defaults:
-  owner : initech
-  channel : integration-testing
-  version : devel
-  checkout : master
-package_overrides:
-  PackA:
-    version : master
+global:
+  export:
+    owner : initech
+    channel : devel
+  setting_overrides:
+    version : devel
+    checkout : master
 ''',Loader=yaml.SafeLoader)
 
   pc = util.PackageCollection()
@@ -322,44 +277,38 @@ package_overrides:
 
     pc.add_from_conan_recipe_collection('.')
 
-    assert len(pc.packages) == 2
+    assert len(pc.package_instances) == 2
 
     idx = names.index('PackA')
-    assert pc.packages[idx].name == 'PackA'
-    assert pc.packages[idx].owner  == 'initech'
-    assert pc.packages[idx].channel == 'integration-testing'
-    assert pc.packages[idx].version == 'master'
-    assert pc.packages[idx].checkout == 'master'
-    assert len(pc.packages[idx].dependencies) == 2
+    assert pc.package_instances[idx].conanfile == str(Path('PackA/conanfile.py').resolve())
+    assert pc.package_instances[idx].setting_overrides['version'] == 'devel'
+    assert pc.package_instances[idx].setting_overrides['checkout'] == 'master'
 
     idx = names.index('PackC')
-    assert pc.packages[idx].name == 'PackC'
-    assert pc.packages[idx].owner  == 'initech'
-    assert pc.packages[idx].channel == 'integration-testing'
-    assert pc.packages[idx].version == 'devel'
-    assert pc.packages[idx].checkout == 'master'
-    assert len(pc.packages[idx].dependencies) == 2
+    assert pc.package_instances[idx].conanfile == str(Path('PackC/conanfile.py').resolve())
+    assert pc.package_instances[idx].setting_overrides['version'] == 'devel'
+    assert pc.package_instances[idx].setting_overrides['checkout'] == 'master'
 
     pc.add_from_conan_recipe_collection('.')
 
-    assert len(pc.packages) == 4
+    assert len(pc.package_instances) == 4
     idx = names.index('PackA')
-    assert pc.packages[idx].name == 'PackA'
-    assert pc.packages[idx+2].name == 'PackA'
+    assert pc.package_instances[idx].conanfile == str(Path('PackA/conanfile.py').resolve())
+    assert pc.package_instances[idx-2].conanfile == str(Path('PackA/conanfile.py').resolve())
     idx = names.index('PackC')
-    assert pc.packages[idx].name == 'PackC'
-    assert pc.packages[idx+2].name == 'PackC'
+    assert pc.package_instances[idx].conanfile == str(Path('PackC/conanfile.py').resolve())
+    assert pc.package_instances[idx-2].conanfile == str(Path('PackC/conanfile.py').resolve())
 
 
 def test_PackageCollection_export_packages():
-  baseline_conanfile_text = '''
+  conanfile_text = '''
 from conans import ConanFile, CMake
 import os, glob
 
 class ConanPackage(ConanFile):
     name = "Name Here"
-    version = "master"
-    checkout = "master"
+    version = "Unknown"
+    checkout = "Unknown"
     generators = "virtualenv"
     requires = "boost/1.69.0@conan/stable"
     build_requires = "cmake_installer/3.13.0@conan/stable"
@@ -399,25 +348,20 @@ class ConanPackage(ConanFile):
     conan_c.touch()
 
     with open(conan_a,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name Here","PackA"))
     with open(conan_b,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name Here","PackB"))
     with open(conan_c,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name Here","PackC"))
 
     config = yaml.load('''
-  package_defaults:
+global:
+  export:
     owner : initech
     channel : devel
+  setting_overrides:
     version : master 
     checkout : master
-  package_overrides:
-    PackA:
-      channel : channel-A
-    PackB:
-      channel : channel-B
-    PackC:
-      channel : channel-C
   ''',Loader=yaml.SafeLoader)
 
     pc = util.PackageCollection()
@@ -426,15 +370,15 @@ class ConanPackage(ConanFile):
     pc.export_packages()
 
   res = subprocess.run("conan search PackA", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  assert re.match( ".*PackA/master@initech/channel-A", str(res.stdout) )
+  assert re.match( ".*PackA/master@initech/devel", str(res.stdout) )
   res = subprocess.run("conan search PackB", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  assert re.match( ".*PackB/master@initech/channel-B", str(res.stdout) )
+  assert re.match( ".*PackB/master@initech/devel", str(res.stdout) )
   res = subprocess.run("conan search PackC", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  assert re.match( ".*PackC/master@initech/channel-C", str(res.stdout) )
+  assert re.match( ".*PackC/master@initech/devel", str(res.stdout) )
 
 
 def test_a_deps_on_b():
-  baseline_conanfile_text = '''
+  conanfile_text = '''
 from conans import ConanFile, CMake
 import os, glob
 
@@ -469,17 +413,15 @@ class ConanPackage(ConanFile):
     conan.touch()
 
     with open(conan,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text)
 
-    p = util.Package()
-    p.load( {
+    p = util.PackageInstance()
+    p.load( {'conanfile' : str(conan),
+            'setting_overrides' : {
             'name' : 'MyPackage',
             'version' : '2.0',
-            'owner' : 'me',
-            'channel' : 'devel',
-            'conanfile' : str(conan),
-            } )
-    p.export()
+            }} )
+    p.export(owner='me', channel='devel')
 
   assert util.a_deps_on_b( "MyPackage/2.0@me/devel", "boost/1.69.0@conan/stable" )
   assert not util.a_deps_on_b( "MyPackage/2.0@me/devel", "MyOtherPackage/2.0@initech/devel" )
@@ -489,11 +431,13 @@ class ConanPackage(ConanFile):
 def test_filter_packages():
 
   config = yaml.load('''
-package_defaults:
-  owner : initech
-  channel : devel
-  version : devel
-  checkout : master
+global:
+  export:
+    owner : initech
+    channel : devel
+  setting_overrides:
+    version : devel
+    checkout : master
   ''',Loader=yaml.SafeLoader)
 
   pc = util.PackageCollection()
@@ -506,7 +450,7 @@ package_defaults:
   res = subprocess.run("conan remove -f PackB", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   res = subprocess.run("conan remove -f PackC", shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   
-  baseline_conanfile_text = '''
+  conanfile_text = '''
 from conans import ConanFile, CMake
 import os, glob
 
@@ -539,23 +483,23 @@ class ConanPackage(ConanFile):
     path.mkdir()
     conan.touch()
     with open(conan,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name","PackA"))
 
     path = Path('PackB')
     conan = path / 'conanfile.py'
     path.mkdir()
     conan.touch()
-    baseline_conanfile_text = baseline_conanfile_text.replace("boost/1.69.0@conan/stable", "PackA/devel@initech/devel")
+    conanfile_text = conanfile_text.replace("boost/1.69.0@conan/stable", "PackA/devel@initech/devel")
     with open(conan,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name","PackB"))
 
     path = Path('PackC')
     conan = path / 'conanfile.py'
     path.mkdir()
     conan.touch()
-    baseline_conanfile_text = baseline_conanfile_text.replace("PackA/devel@initech/devel","PackB/devel@initech/devel")
+    conanfile_text = conanfile_text.replace("PackA/devel@initech/devel","PackB/devel@initech/devel")
     with open(conan,'w') as f:
-      f.write(baseline_conanfile_text)
+      f.write(conanfile_text.replace("Name","PackC"))
 
     pc.add_from_conan_recipe_collection('.')
     pc.export_packages()
@@ -563,16 +507,16 @@ class ConanPackage(ConanFile):
 
 
 
-  assert len( util.filter_packages('all',pc.packages)) == 3
-  assert len( util.filter_packages('none',pc.packages)) == 0
-  assert len( util.filter_packages(['PackA', 'PackB'],pc.packages)) == 2
-  assert len( util.filter_packages(['PackA', 'PackB', 'PackD'],pc.packages)) == 2
-  assert len( util.filter_packages({'include':'Pack'},pc.packages)) == 3
-  assert len( util.filter_packages({'include': 'Pack.*'},pc.packages)) == 3
-  assert len( util.filter_packages({'include':'.*A'},pc.packages)) == 1
-  assert len( util.filter_packages({'exclude':'None'},pc.packages)) == 0
-  assert len( util.filter_packages({'include':'.*', 'exclude':'None'},pc.packages)) == 3
-  assert len( util.filter_packages({'include':'.*', 'exclude':'.*A$'},pc.packages)) == 2
+  assert len( util.filter_packages('all',pc.package_instances)) == 3
+  assert len( util.filter_packages('none',pc.package_instances)) == 0
+  assert len( util.filter_packages(['PackA', 'PackB'],pc.package_instances)) == 2
+  assert len( util.filter_packages(['PackA', 'PackB', 'PackD'],pc.package_instances)) == 2
+  assert len( util.filter_packages({'include':'Pack'},pc.package_instances)) == 3
+  assert len( util.filter_packages({'include': 'Pack.*'},pc.package_instances)) == 3
+  assert len( util.filter_packages({'include':'.*A'},pc.package_instances)) == 1
+  assert len( util.filter_packages({'exclude':'None'},pc.package_instances)) == 0
+  assert len( util.filter_packages({'include':'.*', 'exclude':'None'},pc.package_instances)) == 3
+  assert len( util.filter_packages({'include':'.*', 'exclude':'.*A$'},pc.package_instances)) == 2
 
 
   assert util.a_deps_on_b( "PackA/devel@initech/devel", "boost/1.69.0@conan/stable" )
@@ -584,35 +528,6 @@ class ConanPackage(ConanFile):
   assert util.a_deps_on_b( "PackC/devel@initech/devel", "PackA/devel@initech/devel" )
   assert util.a_deps_on_b( "PackC/devel@initech/devel", "boost/1.69.0@conan/stable" )
 
-
-def test_PackageCollection__build_dependency_set():
-  config = yaml.load('''
-package_defaults:
-  owner : initech
-  channel : devel
-  version : devel
-  checkout : master
-package_overrides:
-  PackA:
-    version : master
-package_instances:
-  - name : PackA
-  - name : PackB
-    dependencies:
-      - 'PackA/2.6@initech/stable'
-  - name : PackC
-    version : '1.1'
-    checkout : 'v1.1'
-  - name : PackA
-    version : '2.6'
-    checkout : 'v2.6'
-    channel : 'stable'
-    dependencies: []
-  ''',Loader=yaml.SafeLoader)
-
-  pc = util.PackageCollection()
-
-  pc.load(config)
 
 def test_get_latest_version_tag_and_get_latest_release():
   with util.in_temporary_directory() as d:

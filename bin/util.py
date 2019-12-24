@@ -10,6 +10,7 @@ import sys
 import pprint
 import tempfile
 import glob
+from fspathdict import pdict
 from pathlib import Path
 from hashlib import sha1
 
@@ -102,21 +103,15 @@ def update_dict(d, u):
       d = u
       return d
 
-class Package:
-  '''Represents a conan package that can be exported. The package consists of:
-       - A baseline conanfile that will be edited to create a conanfile to export the package.
-       - A git url basename used to obtain the source.
-       - A repo name used to obtain the source.
-       - A checkout that will be used to checkout the commit to package.
-       - A name that will be used for the conan package reference.
-       - A version that will be used for the conan package reference.
-       - An owner that will be used for the conan package referance.
-       - A channel that will be used for the conan package reference.
+class PackageInstance:
+  '''Represents a instance of a conan package that can be exported. The package instance consists of:
+       - A conanfile that will be used as the basis of the recipe that will be generated.
+       - A set of setting overrides that will override settings in the conanfile.
+       - A set of requires overrides that will override package requirments in the conanfile.
 
-     A Package knows how to:
-       - Write a custom conan to export by editing the baseline conanfile and embedding
-         information about the source URL, version number, etc. This requires the conan recipe
-         to use variables for these parameters. See the conanfile.py recipes for an example.
+     A PackageInstance knows how to:
+       - Write a modified conan recipe to export by editing the conanfile with the settings_overrides,
+         dependency_overrides, etc.
        - Export the custom conan file to the local cache with a specific package reference id.
   '''
 
@@ -125,19 +120,11 @@ class Package:
     self.clear()
 
   def clear(self):
-    self.baseline_conanfile = None
-    self.git_url_basename = None
-    self.repo_name = None
-    self.checkout = None
-    self.name = None
-    self.version = None
-    self.owner = None
-    self.channel = None
+    self.conanfile = None
+    self.setting_overrides = None
+    self.dependency_overrides = None
 
-    self.dependencies = None
-
-    # self.setting_overrides = None
-    # self.dependency_overrides = None
+    self._name = None
 
   def load(self,d):
     '''Load a package configuration from a dict. All current settings are erased. Any settings not contained by the dict will be left uninitialized.'''
@@ -147,48 +134,32 @@ class Package:
   def update(self,d):
     '''Update package configuration from a dict. All current settings that are not overwritten will remain.'''
 
-    # we want support old parameter names
-    # so we try them first, but overwrite them
+    # if we want support old parameter names
+    # we should try them first, but overwrite them
     # with newer parameter names.
-    self.baseline_conanfile = d.get("conanfile", self.baseline_conanfile)
-    self.baseline_conanfile = d.get("baseline_conanfile", self.baseline_conanfile)
 
-    self.git_url_basename = d.get("url_basename", self.git_url_basename )
-    self.git_url_basename = d.get("git_url_basename", self.git_url_basename )
-
-    self.repo_name = d.get("repo_name", self.repo_name)
-    self.checkout = d.get("checkout", self.checkout)
-    self.name = d.get("name", self.name)
-    self.version = d.get("version", self.version)
-    self.owner = d.get("group", self.owner)
-    self.owner = d.get("owner", self.owner)
-    self.channel = d.get("channel", self.channel)
-
-    self.dependencies = d.get("dependencies", self.dependencies)
+    self.conanfile = d.get("conanfile", self.conanfile)
+    self.setting_overrides = d.get("setting_overrides", self.setting_overrides)
+    self.dependency_overrides = d.get("dependency_overrides", self.dependency_overrides)
 
   @property
-  def conan_package_name_and_version(self):
-    return f"{self.name}/{self.version}"
+  def name(self):
+    if self._name is None:
+      self._name = self.conanfile_path.parent.stem
 
-  @property
-  def conan_package_owner_and_channel(self):
-    return f"{self.owner}/{self.channel}"
-
-  @property
-  def conan_package_reference(self):
-    return f"{self.conan_package_name_and_version}@{self.conan_package_owner_and_channel}"
-
+    return self._name
+    
   @property
   def id(self):
     return sha1(json.dumps(self.__dict__).encode('utf-8')).hexdigest()
 
   @property
-  def baseline_conanfile_path(self):
-    return Path(self.baseline_conanfile)
+  def conanfile_path(self):
+    return Path(self.conanfile)
 
   @property
   def instance_conanfile_path(self):
-    return self.baseline_conanfile_path.parent / Path(self.baseline_conanfile_path.stem + "-" + self.id + self.baseline_conanfile_path.suffix)
+    return self.conanfile_path.parent / Path(self.conanfile_path.stem + "-" + self.id + self.conanfile_path.suffix)
 
   @property
   def instance_conanfile(self):
@@ -199,10 +170,10 @@ class Package:
 
     conanfile = self.instance_conanfile_path
     conanfile_text = None
-    if self.baseline_conanfile_path.is_file():
-      conanfile_text = self.baseline_conanfile_path.read_text()
+    if self.conanfile_path.is_file():
+      conanfile_text = self.conanfile_path.read_text()
     else:
-      raise Exception( f"ERROR: baseline conanfile '{self.baseline_conanfile}' for package '{self.name}' does not exist. Check that it is accessible from '{os.getcwd()}'" )
+      raise Exception( f"ERROR: baseline conanfile '{self.conanfile}' for package '{self.name}' does not exist. Check that it is accessible from '{os.getcwd()}'" )
 
 
     # replace package settings in recipe
@@ -225,7 +196,7 @@ class Package:
       if n > 1:
         print(
               WARN
-              + f"Replaced more than one instance of 'injected_{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
+              + f"Replaced more than one instance of 'injected_{key}' in '{self.conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
               + EOL )
 
       if n < 1:
@@ -235,93 +206,37 @@ class Package:
         if n < 1:
           print(
                 WARN
-                + f"Could not replace '{key}'. Parameter *must* be define a variable named '{self.baseline_conanfile}' file to replace."
+                + f"Could not replace '{key}' in '{self.conanfile}'. Parameter *must* be defined as variable named '{key}' in '{self.conanfile}' file to replace."
                 + EOL )
 
         if n > 1:
           print(
                 WARN
-                + f"Replaced more than one instance of '{key}' in '{self.baseline_conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
+                + f"Replaced more than one instance of '{key}' in '{self.conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
                 + EOL )
       
 
       conanfile_text = text
 
 
-
-    replace_setting( "name", self.name )
-    replace_setting( "version", self.version )
-    replace_setting( "checkout", self.checkout )
-    replace_setting( "git_url_basename", self.git_url_basename)
-    replace_setting( "repo_name", self.repo_name)
-
-    # replace package references with specific instances required by this instance
-    print(INFO+f'''  Writing conan package reference instances for '{self.name}' instance recipe.''')
-    if self.dependencies is not None:
-      for instance in self.dependencies : # loop through instances
-        instance_parse = re.match(fr'''(?P<conan_reference>{parsers.conan_reference_re})''',instance)
-        if instance_parse is None:
-          raise Exception(f"ERROR: it appears that a non-package reference (could not parse '{instance}' as a conan package reference) was listed in the 'dependencies' for '{self.name}'.")
-        for reference_parse in re.finditer( fr'''["'](?P<conan_reference>{parsers.conan_reference_re})["']''', conanfile_text ): # loop to references in conanfile
-          if reference_parse is not None:
-            if instance_parse.group("name") == reference_parse.group("name"):
-              print(INFO+f'''    replacing '{reference_parse.group("conan_reference")}' with '{instance}' ''')
-              conanfile_text = conanfile_text.replace(reference_parse.group("conan_reference"),instance)
-    print(EOL)
-
-
+    if self.setting_overrides is not None:
+      for setting,value in self.setting_overrides.items():
+        replace_setting(setting,value)
 
 
     conanfile.write_text( conanfile_text )
 
-  def export_baseline(self, stdout=None):
-    rc = run(f'''conan export "{self.baseline_conanfile}" "{self.conan_package_owner_and_channel}" ''', stdout, stdout)
-    if rc != 0:
-      print(ERROR)
-      print(f"There was an error exporting {self.name}.")
-      if stdout is not None:
-        print(f"You can view the output in {Path(stdout.name).resolve()}." )
-      print(EOL)
-      return 1
-    return 0
-
-  def export_instance(self, stdout=None):
+  def export(self, owner, channel, stdout=None):
     self.write_instance_conanfile()
-    rc = run(f'''conan export "{self.instance_conanfile}" "{self.conan_package_owner_and_channel}" ''', stdout, stdout)
+    rc = run(f'''conan export "{self.instance_conanfile}" {owner}/{channel}''', stdout, stdout)
     if rc != 0:
       print(ERROR)
-      print(f"There was an error exporting {self.name}.")
+      print(f"There was an error exporting {self.conanfile}.")
       if stdout is not None:
         print(f"You can view the output in {Path(stdout.name).resolve()}." )
       print(EOL)
       return 1
     return 0
-
-  def build(self, stdout=None):
-    rc = run(f'''conan install "{self.conan_package_reference}" --build="{self.name}" ''', stdout, stdout)
-    if rc != 0:
-      print(ERROR)
-      print(f"There was an error building {self.name}.")
-      if stdout is not None:
-        print(f"You can view the output in {Path(stdout.name).resolve()}." )
-      print(EOL)
-      return 1
-    return 0
-
-  def test(self, stdout=None):
-    test_folder = self.instance_conanfile_path.parent / "test_package"
-    if test_folder.is_dir():
-      rc = run(f'''conan test "{str(test_folder)}" "{self.conan_package_reference}"''', stdout, stdout)
-      if rc != 0:
-        print(ERROR)
-        print(f"There was an error testing {self.name}.")
-        if stdout is not None:
-          print(f"You can view the output in {Path(stdout.name).resolve()}." )
-        print(EOL)
-        return 1
-      return 0
-    else:
-      print(f"WARNING: no 'test_folder' found for {self.name} (looking for {str(test_folder)}). Package will not be tested")
 
 
 
@@ -341,7 +256,7 @@ class PackageCollection:
 
     def clear(self):
       self.config = dict()
-      self.packages = list()
+      self.package_instances = list()
 
     def load(self,d=None):
       if d is None:
@@ -356,45 +271,10 @@ class PackageCollection:
       update_dict(self.config,d)
 
       for pi in self.config.get("package_instances",[]):
-        p = Package()
-        p.load( self.config.get("package_defaults",{} ))
-        p.update( self.config.get("package_overrides",{}).get(pi.get("name"),{} ) )
+        p = PackageInstance()
+        p.load( self.config.get("global",{} ))
         p.update( pi )
-        self.packages.append(p)
-
-      for p in self.packages:
-        p.dependencies = self._build_dependency_set(p.dependencies)
-
-    def _build_dependency_set(self, config):
-
-      if config is None:
-        return self._build_dependency_set("collection")
-
-      if isinstance(config,str):
-        if config.lower() == "clear all" or config.lower() == "clear":
-          return []
-        if config.lower() == "collection instances" or config.lower() == "collection":
-          return [p.conan_package_reference for p in self.packages]
-
-        dependency_parse = re.match(fr'''(?P<conan_reference>{parsers.conan_reference_re})''',config)
-        if dependency_parse:
-          return [config]
-        else:
-          raise Exception(f"Error: Dependency specification '{config}' is not a known command or valid connan package reference.")
-
-
-
-      if isinstance(config,list):
-        dependencies = []
-        for item in config:
-          if item == "clear":
-            dependencies = []
-            continue
-
-          dependencies += self._build_dependency_set(item)
-
-        return dependencies
-
+        self.package_instances.append(p)
 
     def add_from_conan_recipe_collection(self,dir):
       '''Build a package collection from a set of directories containing conanfiles. For example, a recipe repository.'''
@@ -404,30 +284,18 @@ class PackageCollection:
 
       if 'package_instances' not in self.config:
         self.config['package_instances'] = []
-      for file in cwd.glob( 'recipes/*/conanfile.py' ):
-        self.config['package_instances'].append( { 'name': file.parent.name, 'baseline_conanfile' : str(file.absolute()) } )
+      for file in cwd.glob( '*/conanfile.py' ):
+        self.config['package_instances'].append( { 'name': file.parent.name, 'conanfile' : str(file.absolute()) } )
 
       self.load() # recreate packages
 
-    def export_baseline_packages(self,config='all',stdout=None):
-      pks = filter_packages(config,self.packages)
+    def export_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.package_instances)
+      config = pdict(self.config)
+      owner = config.get("/global/export/owner","Unknown")
+      channel = config.get("/global/export/channel","Unknown")
       for p in pks:
-        p.export_baseline(stdout)
-
-    def export_instance_packages(self,config='all',stdout=None):
-      pks = filter_packages(config,self.packages)
-      for p in pks:
-        p.export_instance(stdout)
-
-    def build_packages(self,config='all',stdout=None):
-      pks = filter_packages(config,self.packages)
-      for p in pks:
-        p.build(stdout)
-
-    def test_packages(self,config='all',stdout=None):
-      pks = filter_packages(config,self.packages)
-      for p in pks:
-        p.test(stdout)
+        p.export(owner=owner,channel=channel,stdout=stdout)
 
 
 

@@ -1,0 +1,35 @@
+global:
+  export:
+    owner : cd3
+    channel : devel
+  setting_overrides:
+    version: master
+  dependency_overrides:
+    - */*@cd3/testing
+package_instances:
+  - conanfile : ./UnitConvert/conanfile.py
+    export:
+      channel : testing
+    setting_overrides:
+      version : 0.6
+      checkout : 0.6
+  - conanfile : ./UnitConvertGui/conanfile.py
+    setting_overrides:
+      version : 0.1
+      checkout : 0.1
+      requires_overrides:
+        - UnitConvert/0.6@cd3/devel
+  - conanfile : ./libIntegrate/conanfile.py
+    setting_overrides:
+      version : 0.3.3
+      checkout : v0.3.3
+  - conanfile : ./libInterpolate/conanfile.py
+    setting_overrides:
+      version : 2.2
+      checkout : 2.2
+  - conanfile : ./libField/conanfile.py
+    settign_overrides:
+      version : 0.7
+      checkout : 0.7
+  - conanfile : ./hdf5/conanfile.py
+  - conanfile : ./dakota_installer/conanfile.py
