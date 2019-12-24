@@ -589,6 +589,9 @@ def test_override_dependency():
   assert util.override_dependency( "dep/1.0@initech/stable", ["[name]/[version]-rc@[owner]/unstable"] ) == "dep/1.0-rc@initech/unstable"
   assert util.override_dependency( "dep/1.0@initech/stable", ["[name]-custom/[version]-rc@[owner]/unstable"] ) == "dep-custom/1.0-rc@initech/unstable"
 
+  overrides = ["[name]/[version]@cd3/devel","boost/[version]@[owner]/[channel]"]
+  assert util.override_dependency( "myLib/1.0@unknown/unknown", overrides ) == "myLib/1.0@cd3/devel"
+  assert util.override_dependency( "boost/1.69.0@conan/stable", overrides ) == "boost/1.69.0@conan/stable"
 
 
 

@@ -4,6 +4,10 @@ export-all:
 create-all:
 	pipenv run python bin/export-packages.py --create
 
+upload-all:
+	@ echo "To upload conan packages, run the following command."
+	@ echo "$$ conan upload name/version@owner/testing --all -r=remote-to-upload-to"
+
 clean-tmp-dirs:
 	@ rm _* -rf
 
@@ -13,5 +17,5 @@ clean-instances:
 clean-all: clean-tmp-dirs clean-instances
 
 test:
-	pipenv run python -m pytest -s
+	pipenv run python -m pytest -s $(OPTS)
 
