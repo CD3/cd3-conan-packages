@@ -580,6 +580,14 @@ def test_get_latest_version_tag_and_get_latest_release():
       assert util.get_latest_release( repo, "devel", major_series = '2' ) == "v2.3.1"
 
 
+def test_override_dependency():
+
+  assert util.override_dependency( "dep/1.0@initech/stable", ["dep/1.1@initech/unstable"] ) == "dep/1.1@initech/unstable"
+  assert util.override_dependency( "dep/1.0@initech/stable", ["dep/1.1@initech/unstable","dep/1.2@initech/unstable"] ) == "dep/1.2@initech/unstable"
+  assert util.override_dependency( "dep/1.0@initech/stable", ["dep/[version]@[owner]/unstable"] ) == "dep/1.0@initech/unstable"
+  assert util.override_dependency( "dep/1.0@initech/stable", ["[name]/[version]@[owner]/unstable"] ) == "dep/1.0@initech/unstable"
+  assert util.override_dependency( "dep/1.0@initech/stable", ["[name]/[version]-rc@[owner]/unstable"] ) == "dep/1.0-rc@initech/unstable"
+  assert util.override_dependency( "dep/1.0@initech/stable", ["[name]-custom/[version]-rc@[owner]/unstable"] ) == "dep-custom/1.0-rc@initech/unstable"
 
 
 

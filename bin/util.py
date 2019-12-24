@@ -11,6 +11,7 @@ import pprint
 import tempfile
 import glob
 import textwrap
+import inspect
 from fspathdict import pdict
 from pathlib import Path
 from hashlib import sha1
@@ -46,11 +47,6 @@ class parsers:
   version_str = Combine(version_num)
   version_tag = Optional(Literal("v") ^ "ver-" ) + version_str
 
-  name_re = '''(?P<name>[^/"']+)'''
-  version_re = '''(?P<version>[^@"']+)'''
-  owner_re = '''(?P<owner>[^/"']+)'''
-  channel_re = '''(?P<channel>[^"']+)'''
-  conan_reference_re = f"{name_re}/{version_re}@{owner_re}/{channel_re}"
 
 # a context manager for temperarily change the working directory.
 class working_directory(object):
@@ -103,6 +99,30 @@ def update_dict(d, u):
     # a scalar, or a list.
       d = u
       return d
+
+def override_dependency( dependency, overrides ):
+  name_re = '''(?P<name>[^/"']+)'''
+  version_re = '''(?P<version>[^@"']+)'''
+  owner_re = '''(?P<owner>[^/"']+)'''
+  channel_re = '''(?P<channel>[^"']+)'''
+  conan_reference_re = f"{name_re}/{version_re}@{owner_re}/{channel_re}"
+
+  new_dependency = dependency
+  dependency_match = re.match(conan_reference_re,dependency)
+  for override in overrides:
+    override_match = re.match(conan_reference_re,override)
+
+    dep = None
+    if override_match['name'] == dependency_match['name'] or override_match['name'].find("[name]") >= 0:
+      dep = dict()
+      for item in ["name", "version","owner","channel"]:
+        dep[item] = override_match[item].replace(f'[{item}]',dependency_match[item])
+
+    if dep is not None:
+      new_dependency = "{name}/{version}@{owner}/{channel}".format(**dep)
+
+  return new_dependency
+  
 
 class PackageInstance:
   '''Represents a instance of a conan package that can be exported. The package instance consists of:
@@ -177,19 +197,50 @@ class PackageInstance:
       raise Exception( f"ERROR: baseline conanfile '{self.conanfile}' for package '{self.name}' does not exist. Check that it is accessible from '{os.getcwd()}'" )
 
     instance_conanfile_text = f'''
-class Wrapper:
+{inspect.getsource(override_dependency)}
+# creating a local scope to put the original conanfile into
+def Wrapper():
 {textwrap.indent(conanfile_text,prefix='    ')}
 
-class ConanPackageInstance(Wrapper.ConanPackage):
+    # fixme: this will break if the conanfile class is not named
+    # ConanPackage. Should add some code to detect the class name.
+    import inspect
+    for name,obj in locals().items():
+      if inspect.isclass(obj):
+        for base in obj.__bases__:
+          if base.__name__ == "ConanFile":
+            return ConanPackage
+    raise Exception("ERROR: Could not find a class subclassing from the ConanFile class.")
+
+class ConanPackageInstance(Wrapper()):
 '''
 
+    text_to_add = ""
     if self.setting_overrides is not None:
-      indent = "    "
       for setting,value in self.setting_overrides.items():
         if isinstance(value,str):
-          instance_conanfile_text += f"{indent}{setting} = '{value}'\n"
+          text_to_add += f"{setting} = '{value}'\n"
         else:
-          instance_conanfile_text += f"{indent}{setting} = {value}\n"
+          text_to_add += f"{setting} = {value}\n"
+
+    if self.dependency_overrides is not None:
+      text_to_add += f'''dependency_overrides = ['{"','".join(self.dependency_overrides)}']\n'''
+
+    def requirements(self):
+        if hasattr(self,'dependency_overrides'):
+          old_requirements = self.requires.copy()
+          self.requires.clear()
+          for name,reference in old_requirements.iteritems():
+            self.requires( override_dependency(str(reference), self.dependency_overrides))
+    text_to_add += textwrap.dedent(inspect.getsource(requirements))
+    if text_to_add == "":
+      text_to_add = "pass\n"
+
+
+
+
+
+    instance_conanfile_text += textwrap.indent(text_to_add,'    ')
 
 
 
@@ -209,6 +260,17 @@ class ConanPackageInstance(Wrapper.ConanPackage):
       return 1
     return 0
 
+  def create(self, owner, channel, stdout=None):
+    self.write_instance_conanfile()
+    rc = run(f'''conan create "{self.instance_conanfile}" {owner}/{channel}''', stdout, stdout)
+    if rc != 0:
+      print(ERROR)
+      print(f"There was an error creating {self.conanfile}.")
+      if stdout is not None:
+        print(f"You can view the output in {Path(stdout.name).resolve()}." )
+      print(EOL)
+      return 1
+    return 0
 
 
 
@@ -268,6 +330,13 @@ class PackageCollection:
       for p in pks:
         p.export(owner=owner,channel=channel,stdout=stdout)
 
+    def create_packages(self,config='all',stdout=None):
+      pks = filter_packages(config,self.package_instances)
+      config = pdict(self.config)
+      owner = config.get("/global/export/owner","Unknown")
+      channel = config.get("/global/export/channel","Unknown")
+      for p in pks:
+        p.create(owner=owner,channel=channel,stdout=stdout)
 
 
 
