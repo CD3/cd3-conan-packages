@@ -73,13 +73,10 @@ class ConanPackage(ConanFile):
       pass
 '''
 
-  def setting_regex(setting,value,modified=True):
+  def setting_regex(setting,value):
     # helper function that builds a regex to check that
     # a setting was written by the Package
-    if modified:
-      return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*#.*$''',re.MULTILINE)
-    else:
-      return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*$''',re.MULTILINE)
+    return re.compile(rf'''^\s*{setting}\s*=\s*['"]{value}['"]\s*.*$''',re.MULTILINE)
 
   with util.in_temporary_directory() as d:
 
@@ -100,9 +97,9 @@ class ConanPackage(ConanFile):
     assert p.instance_conanfile_path.is_file()
     text = p.instance_conanfile_path.read_text()
 
-    assert setting_regex("name","Name Here",False).search(text)
-    assert setting_regex("version","2.0",True).search(text)
-    assert setting_regex("checkout","master",False).search(text)
+    assert setting_regex("name","Name Here").search(text)
+    assert setting_regex("version","2.0").search(text)
+    assert setting_regex("checkout","master").search(text)
     assert re.search("boost/1.70@conan/stable",text)
 
 
@@ -130,6 +127,7 @@ class ConanPackage(ConanFile):
     assert p.instance_conanfile_path.is_file()
     text = p.instance_conanfile_path.read_text()
 
+    assert setting_regex("name","Name Here").search(text)
     assert setting_regex("name","my_project").search(text)
     assert setting_regex("version","2.0").search(text)
     assert setting_regex("checkout","v2.0").search(text)

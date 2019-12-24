@@ -10,6 +10,7 @@ import sys
 import pprint
 import tempfile
 import glob
+import textwrap
 from fspathdict import pdict
 from pathlib import Path
 from hashlib import sha1
@@ -175,56 +176,26 @@ class PackageInstance:
     else:
       raise Exception( f"ERROR: baseline conanfile '{self.conanfile}' for package '{self.name}' does not exist. Check that it is accessible from '{os.getcwd()}'" )
 
+    instance_conanfile_text = f'''
+class Wrapper:
+{textwrap.indent(conanfile_text,prefix='    ')}
 
-    # replace package settings in recipe
-
-    def replace_setting(key,value):
-      if value is None:
-        return
-
-      nonlocal conanfile_text
-
-      # first try to replace a setting named 'injected_{key}'
-      # if that succeeds, then return to caller. if it does not
-      # suceed, then try to replace the actual setting name
-      # this gives the conan recipie a way to opt-out of having
-      # a setting overwritten
-      regex = re.compile(fr"^(\s*)injected_{key}\s*=\s*.*",re.MULTILINE)
-      msg = "Note: this line was modified to make sure this setting is static."
-      text,n = re.subn( regex, fr"\1injected_{key} = '{value}' # {msg}", conanfile_text)
-
-      if n > 1:
-        print(
-              WARN
-              + f"Replaced more than one instance of 'injected_{key}' in '{self.conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
-              + EOL )
-
-      if n < 1:
-        regex = re.compile(fr"^(\s*){key}\s*=\s*.*",re.MULTILINE)
-        msg = "Note: this line was modified to make sure this setting is static."
-        text,n = re.subn( regex, fr"\1{key} = '{value}' # {msg}", conanfile_text)
-        if n < 1:
-          print(
-                WARN
-                + f"Could not replace '{key}' in '{self.conanfile}'. Parameter *must* be defined as variable named '{key}' in '{self.conanfile}' file to replace."
-                + EOL )
-
-        if n > 1:
-          print(
-                WARN
-                + f"Replaced more than one instance of '{key}' in '{self.conanfile}'. Make sure you didn't use a local variable with the same name somewhere."
-                + EOL )
-      
-
-      conanfile_text = text
-
+class ConanPackageInstance(Wrapper.ConanPackage):
+'''
 
     if self.setting_overrides is not None:
+      indent = "    "
       for setting,value in self.setting_overrides.items():
-        replace_setting(setting,value)
+        if isinstance(value,str):
+          instance_conanfile_text += f"{indent}{setting} = '{value}'\n"
+        else:
+          instance_conanfile_text += f"{indent}{setting} = {value}\n"
 
 
-    conanfile.write_text( conanfile_text )
+
+
+
+    conanfile.write_text( instance_conanfile_text )
 
   def export(self, owner, channel, stdout=None):
     self.write_instance_conanfile()
