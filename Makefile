@@ -19,3 +19,5 @@ clean-all: clean-tmp-dirs clean-instances
 test:
 	pipenv run python -m pytest -s $(OPTS)
 
+create-releases:
+	pipenv run python bin/export-packages.py --create ./01-configurations/releases.yaml

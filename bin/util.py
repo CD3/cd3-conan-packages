@@ -202,8 +202,6 @@ class PackageInstance:
 def Wrapper():
 {textwrap.indent(conanfile_text,prefix='    ')}
 
-    # fixme: this will break if the conanfile class is not named
-    # ConanPackage. Should add some code to detect the class name.
     import inspect
     for name,obj in locals().items():
       if inspect.isclass(obj):
