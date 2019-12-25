@@ -17,7 +17,7 @@ class ConanPackage(ConanFile):
 
     requires = "boost/1.66.0@conan/stable", "lapack/3.7.1@conan/stable"
 
-    default_options = {"boost:shared":False, "mpi":False}
+    default_options = {"mpi":False}
 
     def source(self):
         vmajor, vminor, vpatch = self.version.split(".")
@@ -52,8 +52,37 @@ class ConanPackage(ConanFile):
         cmake.build()
 
     def package(self):
-        cmake = CMake(self)
-        cmake.install()
+        # cmake = CMake(self)
+        # cmake.install()
+        # cmake will strip rpath, which is not what we want
+        self.copy("*.lib", dst="lib", keep_path=False)
+        self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.so", dst="lib", keep_path=False)
+        self.copy("*.dylib", dst="lib", keep_path=False)
+
+        self.copy("*/coliny", dst="bin", keep_path=False)
+        self.copy("*/dakota", dst="bin", keep_path=False)
+        self.copy("*/dakota.input.nspec", dst="bin", keep_path=False)
+        self.copy("*/dakota.input.summary", dst="bin", keep_path=False)
+        self.copy("*/dakota_library_mode", dst="bin", keep_path=False)
+        self.copy("*/dakota_order_input", dst="bin", keep_path=False)
+        self.copy("*/dakota_restart_util", dst="bin", keep_path=False)
+        self.copy("*/dakota.sh", dst="bin", keep_path=False)
+        self.copy("*/dakota.xml", dst="bin", keep_path=False)
+        self.copy("*/dakota.xsd", dst="bin", keep_path=False)
+        self.copy("*/dprepro", dst="bin", keep_path=False)
+        self.copy("*/dprepro.perl", dst="bin", keep_path=False)
+        self.copy("*/fsu_cvt_standalone", dst="bin", keep_path=False)
+        self.copy("*/fsu_halton_standalone", dst="bin", keep_path=False)
+        self.copy("*/fsu_hammersley_standalone", dst="bin", keep_path=False)
+        self.copy("*/fsu_latinize_standalone", dst="bin", keep_path=False)
+        self.copy("*/fsu_quality_standalone", dst="bin", keep_path=False)
+        self.copy("*/lhsdrv", dst="bin", keep_path=False)
+        self.copy("*/memmon", dst="bin", keep_path=False)
+        self.copy("*/mpitile", dst="bin", keep_path=False)
+        self.copy("*/pyprepro", dst="bin", keep_path=False)
+        self.copy("*/surfpack", dst="bin", keep_path=False)
+        self.copy("*/timer", dst="bin", keep_path=False)
 
     def package_info(self):
         self.env_info.path.append(os.path.join(self.package_folder, "bin"))

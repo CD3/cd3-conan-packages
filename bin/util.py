@@ -107,6 +107,7 @@ def override_dependency( dependency, overrides ):
   channel_re = '''(?P<channel>[^"']+)'''
   conan_reference_re = f"{name_re}/{version_re}@{owner_re}/{channel_re}"
 
+  import re
   new_dependency = dependency
   dependency_match = re.match(conan_reference_re,dependency)
   for override in overrides:
@@ -159,15 +160,13 @@ class PackageInstance:
     # we should try them first, but overwrite them
     # with newer parameter names.
 
+    self._name     = d.get("name", "unknown")
     self.conanfile = d.get("conanfile", self.conanfile)
     self.setting_overrides = d.get("setting_overrides", self.setting_overrides)
     self.dependency_overrides = d.get("dependency_overrides", self.dependency_overrides)
 
   @property
   def name(self):
-    if self._name is None:
-      self._name = self.conanfile_path.parent.stem
-
     return self._name
     
   @property
@@ -248,6 +247,7 @@ class ConanPackageInstance(Wrapper()):
 
   def export(self, owner, channel, stdout=None):
     self.write_instance_conanfile()
+    print(f"Exporting {self.instance_conanfile} to {owner}/{channel}")
     rc = run(f'''conan export "{self.instance_conanfile}" {owner}/{channel}''', stdout, stdout)
     if rc != 0:
       print(ERROR)
@@ -307,16 +307,21 @@ class PackageCollection:
         p.update( pi )
         self.package_instances.append(p)
 
+    def add_conanfile(self,conanfile):
+      if 'package_instances' not in self.config:
+        self.config['package_instances'] = []
+
+      file = Path(conanfile)
+      self.config['package_instances'].append( { 'name': file.parent.name, 'conanfile' : str(file.absolute()) } )
+
     def add_from_conan_recipe_collection(self,dir):
       '''Build a package collection from a set of directories containing conanfiles. For example, a recipe repository.'''
       cwd = Path(dir)
       if not cwd.is_dir():
         raise Exception(f"Cannot build package collection from '{dir}', directory does not exist")
 
-      if 'package_instances' not in self.config:
-        self.config['package_instances'] = []
       for file in cwd.glob( '*/conanfile.py' ):
-        self.config['package_instances'].append( { 'name': file.parent.name, 'conanfile' : str(file.absolute()) } )
+        self.add_conanfile(str(file.absolute()))
 
       self.load() # recreate packages
 

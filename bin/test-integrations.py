@@ -19,6 +19,7 @@ prog_path = Path(sys.argv[0]).resolve()
 
 def test_package(package, profiles, do_unit_tests=True):
     conanfile = package.instance_conanfile
+    print("testing recipe in",conanfile)
     source_dir = Path(".")
     build_dir = source_dir / (package.name + ".build")
     outfile = Path(f"{package.name}.out")
@@ -119,43 +120,40 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
 
     pc = util.PackageCollection()
     default_configuration_text = f'''
-  package_defaults:
-    version: testing
+global:
+  export:
     channel: integration-tests
-    owner: cd3
-    git_url_basename: git@github.com:CD3
+    owner: none
+  setting_overrides:
     checkout: master
-  package_overrides:
-    UnitTestCpp :
-      version: "2.0"
-      checkout: "v2.0.0"
-      git_url_basename: "git://github.com/unittest-cpp"
-    XercesC:
-      version: "3.2.2"
-      git_url_basename : null
-      checkout : null
-  {prog_path.stem}:
-    packages_to_test:
-      include: '.*'
-      exclude:
-       - UnitTestCpp
-       - XercesC
-    scratch-folder : "_{prog_path.stem}.d"
+    version: testing
+  dependency_overrides: []
+package_instances: []
+{prog_path.stem}:
+  scratch-folder : "_{prog_path.stem}.d"
   '''
-    pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
+    config = yaml.load( default_configuration_text, Loader=yaml.SafeLoader )
     if print_default_configuration:
       print("# Default Configuration")
-      print(yaml.dump(pc.config))
+      print(yaml.dump(config))
       sys.exit(0)
 
     for file in config_file:
-      pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
+      util.update_dict( config, yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
-    pc.add_from_conan_recipe_collection(".")
+    for marker in Path("recipes").glob("*/test-integrations"):
+      file = marker.parent / "conanfile.py"
+      if not file.exists():
+        print(util.WARN + f"WARNING: did not find conanfile.py next to {str(marker)}. Skipping"+util.EOL)
+      config['package_instances'].append( {'conanfile':str(file.absolute()), 'name' : str(file.parent.stem) } )
+      config['global']['dependency_overrides'].append(f"{file.parent.stem}/testing@none/integration-tests")
+
     if print_configuration:
       print("# Complete Configuration")
-      print(yaml.dump(pc.config))
+      print(yaml.dump(config))
       sys.exit(0)
+
+    pc.load(config)
 
     scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
     if scratch_folder_path.exists():
@@ -180,11 +178,10 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
       print("Done")
 
 
-
     if test:
-      packages_to_test = util.filter_packages( {'include' : list(test) }, pc.packages )
+      packages_to_test = util.filter_packages( {'include' : list(test) }, pc.package_instances )
     else:
-      packages_to_test = util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.packages )
+      packages_to_test = util.filter_packages( pc.config[prog_path.stem].get('packages_to_test','all'), pc.package_instances )
 
     print(util.EMPH+"Testing packages: " + ", ".join([p.name for p in packages_to_test])+util.EOL)
     with util.working_directory(scratch_folder_path):
