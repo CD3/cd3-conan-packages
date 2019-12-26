@@ -118,13 +118,14 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
     if libField is updated, this script will run an verify that all of the packages dependeing on libMPE can still build and pass their unit tests.
     """
 
-    pc = util.PackageCollection()
     default_configuration_file = prog_path.parent / f"{prog_path.stem}-default-config.yaml"
     if default_configuration_file.exists():
       default_configuration_text = default_configuration_file.read_text()
     else:
       default_configuration_text = ""
       print(util.WARN + f"WARNING: did not find default configuration file '{str(default_configuration_file)}'." + util.EOL)
+
+
     config = yaml.load( default_configuration_text, Loader=yaml.SafeLoader )
     if print_default_configuration:
       print("# Default Configuration")
@@ -150,6 +151,7 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
       print(yaml.dump(config))
       sys.exit(0)
 
+    pc = util.PackageCollection()
     pc.load(config)
 
     scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])

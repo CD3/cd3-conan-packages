@@ -27,29 +27,46 @@ def main(print_default_configuration,print_configuration,package,owner,channel,c
   they install.
   """
 
-  pc = util.PackageCollection()
   default_configuration_file = prog_path.parent / f"{prog_path.stem}-default-config.yaml"
   if default_configuration_file.exists():
     default_configuration_text = default_configuration_file.read_text()
   else:
     default_configuration_text = ""
     print(util.WARN + f"WARNING: did not find default configuration file '{str(default_configuration_file)}'." + util.EOL)
-  pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
+
+
+  config = yaml.load( default_configuration_text, Loader=yaml.SafeLoader )
   if print_default_configuration:
     print("# Default Configuration")
-    print(yaml.dump(pc.config))
+    print(yaml.dump(config))
     sys.exit(0)
 
   for file in config_file:
-    pc.update( yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
+    util.update_dict( config, yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
-  if not 'package_instances' in pc.config:
-    pc.add_from_conan_recipe_collection("recipes")
+  
+  if not 'global' in config:
+    config['global'] = dict()
+
+  if not 'export' in config['global']:
+    config['global']['export'] = dict()
+
+  config['global']['export']['owner'] = owner
+  config['global']['export']['channel'] = channel
+
+
+  if not 'package_instances' in config:
+    config['package_instances'] = list()
+    for file in Path("recipes").glob("*/conanfile.py"):
+      config['package_instances'].append( {'conanfile':str(file.absolute()), 'name' : str(file.parent.stem) } )
 
   if print_configuration:
     print("# Complete Configuration")
-    print(yaml.dump(pc.config))
+    print(yaml.dump(config))
     sys.exit(0)
+
+  pc = util.PackageCollection()
+  pc.load( config )
 
   scratch_folder_path = Path(pc.config[prog_path.stem]["scratch-folder"])
   if scratch_folder_path.exists():

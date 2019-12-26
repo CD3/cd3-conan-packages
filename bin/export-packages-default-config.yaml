@@ -1,7 +1,7 @@
 global:
   export:
-    owner: {owner}
-    channel: {channel}
+    owner: cd3
+    channel: devel
 export-packages:
   packages_to_export : all
   scratch-folder : "_package-exports.d"
