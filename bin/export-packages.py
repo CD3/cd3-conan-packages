@@ -28,15 +28,12 @@ def main(print_default_configuration,print_configuration,package,owner,channel,c
   """
 
   pc = util.PackageCollection()
-  default_configuration_text = f'''
-global:
-  export:
-    owner: {owner}
-    channel: {channel}
-{prog_path.stem}:
-  packages_to_export : all
-  scratch-folder : "_package-exports.d"
-'''
+  default_configuration_file = prog_path.parent / f"{prog_path.stem}-default-config.yaml"
+  if default_configuration_file.exists():
+    default_configuration_text = default_configuration_file.read_text()
+  else:
+    default_configuration_text = ""
+    print(util.WARN + f"WARNING: did not find default configuration file '{str(default_configuration_file)}'." + util.EOL)
   pc.load( yaml.load( default_configuration_text, Loader=yaml.SafeLoader ) )
   if print_default_configuration:
     print("# Default Configuration")

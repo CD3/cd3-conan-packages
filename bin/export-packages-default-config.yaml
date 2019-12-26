@@ -1,0 +1,7 @@
+global:
+  export:
+    owner: {owner}
+    channel: {channel}
+export-packages:
+  packages_to_export : all
+  scratch-folder : "_package-exports.d"

@@ -119,19 +119,12 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
     """
 
     pc = util.PackageCollection()
-    default_configuration_text = f'''
-global:
-  export:
-    channel: integration-tests
-    owner: none
-  setting_overrides:
-    checkout: master
-    version: testing
-  dependency_overrides: []
-package_instances: []
-{prog_path.stem}:
-  scratch-folder : "_{prog_path.stem}.d"
-  '''
+    default_configuration_file = prog_path.parent / f"{prog_path.stem}-default-config.yaml"
+    if default_configuration_file.exists():
+      default_configuration_text = default_configuration_file.read_text()
+    else:
+      default_configuration_text = ""
+      print(util.WARN + f"WARNING: did not find default configuration file '{str(default_configuration_file)}'." + util.EOL)
     config = yaml.load( default_configuration_text, Loader=yaml.SafeLoader )
     if print_default_configuration:
       print("# Default Configuration")
@@ -141,6 +134,10 @@ package_instances: []
     for file in config_file:
       util.update_dict( config, yaml.load( Path(file).read_text(), Loader=yaml.SafeLoader ) )
 
+    if 'packages_instances' not in config:
+      config['package_instances'] = list()
+    if 'global' not in config:
+      config['global'] = dict()
     for marker in Path("recipes").glob("*/test-integrations"):
       file = marker.parent / "conanfile.py"
       if not file.exists():

@@ -1,0 +1,11 @@
+global:
+  export:
+    channel: integration-tests
+    owner: none
+  setting_overrides:
+    checkout: master
+    version: testing
+  dependency_overrides: []
+package_instances: []
+test-integrations:
+  scratch-folder : "_test-integrations.d"
