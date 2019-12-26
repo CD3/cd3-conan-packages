@@ -1,8 +1,8 @@
 export-all:
-	pipenv run python bin/export-packages.py
+	pipenv run python bin/export-packages.py $(OPTS)
 
 create-all:
-	pipenv run python bin/export-packages.py --create
+	pipenv run python bin/export-packages.py --create $(OPTS)
 
 upload-all:
 	@ echo "To upload conan packages, run the following command."
@@ -16,8 +16,11 @@ clean-instances:
 
 clean-all: clean-tmp-dirs clean-instances
 
-test:
+test-utils:
 	pipenv run python -m pytest -s $(OPTS)
 
+test-integrations:
+	pipenv run python bin/test-integrations.py $(OPTS)
+
 create-releases:
-	pipenv run python bin/export-packages.py --create ./01-configurations/releases.yaml
+	pipenv run python bin/export-packages.py --create ./01-configurations/releases.yaml $(OPTS)
