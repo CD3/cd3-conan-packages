@@ -14,8 +14,8 @@ prog_path = Path(sys.argv[0]).resolve()
 @click.option("--print-default-configuration", help ="Print the default configuration that will be used and exit.",is_flag=True)
 @click.option("--print-configuration",         help ="Print the actual configuration that will be used and exit.", is_flag=True)
 @click.option("-p","--package",                help ="Select subset of packages to export.",multiple=True)
-@click.option("-o","--owner",                  help ="Set owner to to use for package export.",default="cd3")
-@click.option("-c","--channel",                help ="Set channel to to use for package export.",default="devel")
+@click.option("-o","--owner",                  help ="Set owner to to use for package export.")
+@click.option("-c","--channel",                help ="Set channel to to use for package export.")
 @click.option("--create",                      help ="Create packages (build and pacakage) instead of just exporting.",is_flag=True)
 @click.argument("config_file", required=False, nargs=-1, type=click.Path())
 def main(print_default_configuration,print_configuration,package,owner,channel,create,config_file):
@@ -51,8 +51,10 @@ def main(print_default_configuration,print_configuration,package,owner,channel,c
   if not 'export' in config['global']:
     config['global']['export'] = dict()
 
-  config['global']['export']['owner'] = owner
-  config['global']['export']['channel'] = channel
+  if owner:
+    config['global']['export']['owner'] = owner
+  if channel:
+    config['global']['export']['channel'] = channel
 
 
   if not 'package_instances' in config:
