@@ -1,15 +1,26 @@
 # Conan Package Recipes for CD3 Projects
 
-This is a collection of conan package recipes for various libraries I have written or use. Conan greatly simplifies
+This is a collection of recipes and utilities for building conan packages for various libraries I have written or use. Conan greatly simplifies
 managing project dependencies, so it is easy to use a project that depends on another project. You just tell conan
 what your project dependencies are, and it will automatically locate and configure them for you.
 
 # Using
 
-The `install.py` script will export all of the conan package recopies to your local cache.
+Note: several of these libraries are available at https://api.bintray.com/conan/cd3/conan-devel. This repo is used to develop those packages.
+If you just want to use the libraries, add a remote to your conan.
 
 ```
-$ python3 ./install.py
+$ conan remote add cd3 https://api.bintray.com/conan/cd3/conan-devel 
+```
+
+
+
+A Makefile is provided to run common commands. The Makefile will call python scripts in the `bin/` directory,
+and use `pipenv` to provide their dependencies, so you need to have `pipenv` installed (`pip install pipenv`).
+To export all of the recipes to your local cache, run
+
+```
+$ make export-all
 ```
 
 Conan can download and build packages on demand, so no packages are built during the install. You will only download and build
@@ -55,7 +66,7 @@ $ cmake --build .
 ```
 
 Conan can also build your project for you, using cmake. The advantage of doing this is that you do not need to run the activate script.
-To need to write provide a `conanfile.py` script that contains a `build` method. A minimum example looks like this:
+You just need to provide a `conanfile.py` script that contains a `build` method. A minimum example looks like this:
 
 ```
 from conans import ConanFile, CMake
