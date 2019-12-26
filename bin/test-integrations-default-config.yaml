@@ -1,7 +1,7 @@
 global:
   export:
     channel: integration-tests
-    owner: none
+    owner: tester
   setting_overrides:
     checkout: master
     version: testing
