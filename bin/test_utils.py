@@ -594,5 +594,24 @@ def test_override_dependency():
   assert util.override_dependency( "boost/1.69.0@conan/stable", overrides ) == "boost/1.69.0@conan/stable"
 
 
+  overrides = ["*/*@cd3/*->[name]/[version]@[owner]/testing"]
+  assert util.override_dependency( "myLib/1.0@cd3/devel", overrides ) == "myLib/1.0@cd3/testing"
+  assert util.override_dependency( "boost/1.69.0@conan/stable", overrides ) == "boost/1.69.0@conan/stable"
+
+  overrides = ["*/*@cd3/stable->[name]/[version]-rc1@[owner]/testing"]
+  assert util.override_dependency( "myLib/1.0@cd3/devel", overrides ) == "myLib/1.0@cd3/devel"
+  assert util.override_dependency( "myLib/1.0@cd3/stable", overrides ) == "myLib/1.0-rc1@cd3/testing"
+  assert util.override_dependency( "boost/1.69.0@conan/stable", overrides ) == "boost/1.69.0@conan/stable"
+
+
+  with pytest.raises(SyntaxError):
+    util.override_dependency( "1.0@cd3/devel", "*/*@*/*")
+  with pytest.raises(SyntaxError):
+    util.override_dependency( "myLib/1.0@cd3/devel", "*@*/*")
+  with pytest.raises(SyntaxError):
+    util.override_dependency( "myLib/1.0@cd3/devel", "*@*/*->[name]/[version]@[owner]/[channel]")
+  with pytest.raises(SyntaxError):
+    util.override_dependency( "myLib/1.0@cd3/devel", "*/*@*/*->[name]/[version]@[channel]")
+
 
 

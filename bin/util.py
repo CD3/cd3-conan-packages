@@ -110,17 +110,44 @@ def override_dependency( dependency, overrides ):
   import re
   new_dependency = dependency
   dependency_match = re.match(conan_reference_re,dependency)
+  if not dependency_match:
+    raise SyntaxError(f"'{dependency}' does not appear to be a valid conan package reference. i.e. name/version@owner/channel")
   for override in overrides:
-    override_match = re.match(conan_reference_re,override)
 
-    dep = None
-    if override_match['name'] == dependency_match['name'] or override_match['name'].find("[name]") >= 0:
-      dep = dict()
-      for item in ["name", "version","owner","channel"]:
-        dep[item] = override_match[item].replace(f'[{item}]',dependency_match[item])
+    if override.find("->") > -1:
+      override_pattern,override_replace = override.split("->",maxsplit=2)
+      override_pattern = override_pattern.strip()
+      override_replace = override_replace.strip()
+      override_pattern_match = re.match(conan_reference_re,override_pattern)
+      override_replace_match = re.match(conan_reference_re,override_replace)
+      if not override_pattern_match:
+        raise SyntaxError(f"'{override_pattern}' does not appear to be a valid conan package reference. i.e. name/version@owner/channel")
+      if not override_replace_match:
+        raise SyntaxError(f"'{override_replace}' does not appear to be a valid conan package reference. i.e. name/version@owner/channel")
 
-    if dep is not None:
-      new_dependency = "{name}/{version}@{owner}/{channel}".format(**dep)
+      matches = dict()
+      for item in ["name","version","owner","channel"]:
+        matches[item] = False
+        if override_pattern_match[item] == "*" or override_pattern_match[item] == dependency_match[item]:
+          matches[item] = True
+      if all(matches.values()):
+        new_dependency = override_replace
+        for item in ["name", "version","owner","channel"]:
+          new_dependency = new_dependency.replace(f'[{item}]',dependency_match[item])
+
+
+    else:
+      override_match = re.match(conan_reference_re,override)
+      if not override_match:
+        raise SyntaxError(f"'{override}' does not appear to be a valid conan package reference. i.e. name/version@owner/channel")
+      dep = None
+      if override_match['name'] == dependency_match['name'] or override_match['name'].find("[name]") >= 0:
+        dep = dict()
+        for item in ["name", "version","owner","channel"]:
+          dep[item] = override_match[item].replace(f'[{item}]',dependency_match[item])
+
+      if dep is not None:
+        new_dependency = "{name}/{version}@{owner}/{channel}".format(**dep)
 
   return new_dependency
   
