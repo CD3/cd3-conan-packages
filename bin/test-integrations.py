@@ -139,12 +139,18 @@ def main(print_default_configuration,print_configuration,test,profile,unit_tests
       config['package_instances'] = list()
     if 'global' not in config:
       config['global'] = dict()
+    if 'export' not in config['global']:
+      config['global']['export'] = dict()
+
+    config['global']['export']['owner'] = "tester"
+    config['global']['export']['channel'] = "integration-tests"
+
     for marker in Path("recipes").glob("*/test-integrations"):
       file = marker.parent / "conanfile.py"
       if not file.exists():
         print(util.WARN + f"WARNING: did not find conanfile.py next to {str(marker)}. Skipping"+util.EOL)
       config['package_instances'].append( {'conanfile':str(file.absolute()), 'name' : str(file.parent.stem) } )
-      config['global']['dependency_overrides'].append(f"{file.parent.stem}/testing@none/integration-tests")
+      config['global']['dependency_overrides'].append(f"{file.parent.stem}/testing@{config['global']['export']['owner']}/{config['global']['export']['channel']}")
 
     if print_configuration:
       print("# Complete Configuration")

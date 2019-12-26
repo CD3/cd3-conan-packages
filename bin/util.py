@@ -287,7 +287,8 @@ class ConanPackageInstance(Wrapper()):
 
   def create(self, owner, channel, stdout=None):
     self.write_instance_conanfile()
-    rc = run(f'''conan create "{self.instance_conanfile}" {owner}/{channel}''', stdout, stdout)
+    print(f"Creating {self.instance_conanfile} in {owner}/{channel}")
+    rc = run(f'''conan create "{self.instance_conanfile}" {owner}/{channel} --build missing''', stdout, stdout)
     if rc != 0:
       print(ERROR)
       print(f"There was an error creating {self.conanfile}.")
@@ -361,6 +362,9 @@ class PackageCollection:
         p.export(owner=owner,channel=channel,stdout=stdout)
 
     def create_packages(self,config='all',stdout=None):
+      # need to export packages first
+      self.export_packages(config,stdout)
+
       pks = filter_packages(config,self.package_instances)
       config = pdict(self.config)
       owner = config.get("/global/export/owner","Unknown")
