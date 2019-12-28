@@ -27,6 +27,8 @@ class ConanPackage(ConanFile):
                                 'project(libInterp)\nset(STANDALONE OFF)')
         cmake = CMake(self)
         defs = {}
+        if not self.devlop:
+          defs["BUILD_TESTS"] = "OFF"
         cmake.configure(source_folder=self.name,defs=defs)
         cmake.build()
 
