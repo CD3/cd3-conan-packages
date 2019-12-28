@@ -13,8 +13,8 @@ package_instances:
       checkout : "v0.3.3"
   - conanfile : ./recipes/libInterpolate/conanfile.py
     setting_overrides:
-      version : "2.2"
-      checkout : "2.2"
+      version : "2.3"
+      checkout : "2.3"
   - conanfile : ./recipes/UnitConvert/conanfile.py
     setting_overrides:
       version : "0.6"
