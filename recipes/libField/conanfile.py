@@ -4,8 +4,8 @@ import os
 class ConanPackage(ConanFile):
     name = "libField"
     git_url_basename = "git://github.com/CD3"
-    version = "master"
-    checkout = "master"
+    version = "0.7"
+    checkout = "0.7"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for storing and working with field data."

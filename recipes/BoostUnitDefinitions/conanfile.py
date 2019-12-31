@@ -2,19 +2,19 @@ from conans import ConanFile, CMake, tools
 import os, glob
 
 class ConanPackage(ConanFile):
-    name = "UnitConvert"
+    name = "BoostUnitDefinitions"
     git_url_basename = "git://github.com/CD3"
-    version = "0.6"
-    checkout = "0.6"
+    version = "0.1"
+    checkout = "0.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
-    description = "A C++ library for runtime unit conversions."
+    description = "A set of unit definitions for doing physical calculations with Boost.Units."
     license = "MIT"
     topics = ("C++", "Physics")
 
-    generators = "cmake", "virtualenv"
+    generators = "cmake_paths", "virtualenv"
     requires = 'boost/1.69.0@conan/stable'
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os"
 
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
@@ -33,5 +33,5 @@ class ConanPackage(ConanFile):
         cmake.install()
         
     def package_info(self):
-        self.env_info.UnitConvert_DIR = os.path.join(self.package_folder, "cmake")
+        self.env_info.BoostUnitDefinitions_DIR = os.path.join(self.package_folder, "cmake")
 

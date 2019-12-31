@@ -4,8 +4,8 @@ import os
 class ConanPackage(ConanFile):
     name = "libGBP"
     git_url_basename = "git://github.com/CD3"
-    version = "master"
-    checkout = "master"
+    version = "0.1.1"
+    checkout = "v0.1.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library Gaussian bean propagation calculations."
@@ -21,10 +21,8 @@ class ConanPackage(ConanFile):
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
     def build(self):
-        if not self.develop:
-          tools.replace_in_file(os.path.join(self.source_folder, self.name, 'CMakeLists.txt'),
-                                f'project({self.name})',
-                                f'project({self.name})\nset(STANDALONE OFF)')
+        # this will disable unit tests
+        tools.replace_in_file(os.path.join(self.source_folder, self.name, 'CMakeLists.txt'),"  set(STANDALONE ON)","  set(STANDALONE OFF)")
         cmake = CMake(self)
         defs = {}
         print(defs)

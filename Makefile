@@ -22,5 +22,5 @@ test-utils:
 test-integrations:
 	pipenv run python bin/test-integrations.py $(OPTS)
 
-create-releases:
-	pipenv run python bin/export-packages.py --create ./01-configurations/releases.yaml $(OPTS)
+create-masters:
+	pipenv run python bin/export-packages.py --create ./01-configurations/masters.yaml $(OPTS)

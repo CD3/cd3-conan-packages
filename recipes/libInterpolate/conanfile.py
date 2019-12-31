@@ -4,8 +4,8 @@ import os
 class ConanPackage(ConanFile):
     name = "libInterpolate"
     git_url_basename = "git://github.com/CD3"
-    version = "master"
-    checkout = "master"
+    version = "2.3"
+    checkout = "2.3"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical interpolation supporting multiple methods/algorithms."

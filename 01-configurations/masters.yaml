@@ -2,20 +2,14 @@ global:
   export:
     owner : cd3
     channel : devel
+  setting_overrides:
+    version : "master"
+    checkout : "master"
 package_instances:
   - conanfile : ./recipes/libField/conanfile.py
-    setting_overrides:
-      version : "0.7"
-      checkout : "0.7"
   - conanfile : ./recipes/libIntegrate/conanfile.py
-    setting_overrides:
-      version : "0.3.3"
-      checkout : "v0.3.3"
   - conanfile : ./recipes/libInterpolate/conanfile.py
-    setting_overrides:
-      version : "2.3"
-      checkout : "2.3"
   - conanfile : ./recipes/UnitConvert/conanfile.py
-    setting_overrides:
-      version : "0.6"
-      checkout : "0.6"
+  - conanfile : ./recipes/libArrhenius/conanfile.py
+  - conanfile : ./recipes/BoostUnitDefinitions/conanfile.py
+  - conanfile : ./recipes/libGBP/conanfile.py
