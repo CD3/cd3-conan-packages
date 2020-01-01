@@ -4,8 +4,8 @@ import os, glob
 class ConanPackage(ConanFile):
     name = "BoostUnitDefinitions"
     git_url_basename = "git://github.com/CD3"
-    version = "0.1"
-    checkout = "0.1"
+    version = "0.1.1"
+    checkout = "0.1.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A set of unit definitions for doing physical calculations with Boost.Units."
