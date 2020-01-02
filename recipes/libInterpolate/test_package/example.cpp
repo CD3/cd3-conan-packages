@@ -1,4 +1,4 @@
-#include <Interp.hpp>
+#include <libInterpolate/Interpolate.hpp>
 
 int main()
 {

@@ -1,0 +1,7 @@
+global:
+  export:
+    owner : cd3
+    channel : devel
+package_instances:
+  - conanfile : ./recipes/libIntegrate/conanfile.py
+  - conanfile : ./recipes/libInterpolate/conanfile.py
