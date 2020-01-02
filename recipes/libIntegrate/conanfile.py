@@ -4,8 +4,8 @@ import os
 class ConanPackage(ConanFile):
     name = "libIntegrate"
     git_url_basename = "git://github.com/CD3"
-    version = "0.4"
-    checkout = "v0.4"
+    version = "0.4.2"
+    checkout = "v0.4.2"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical integration supporting multiple methods/algorithms."

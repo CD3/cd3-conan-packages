@@ -4,8 +4,8 @@ import os
 class ConanPackage(ConanFile):
     name = "libInterpolate"
     git_url_basename = "git://github.com/CD3"
-    version = "2.3"
-    checkout = "2.3"
+    version = "2.3.1"
+    checkout = "2.3.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical interpolation supporting multiple methods/algorithms."
@@ -27,7 +27,7 @@ class ConanPackage(ConanFile):
                                 'project(libInterp)\nset(STANDALONE OFF)')
         cmake = CMake(self)
         defs = {}
-        if not self.devlop:
+        if not self.develop:
           defs["BUILD_TESTS"] = "OFF"
         cmake.configure(source_folder=self.name,defs=defs)
         cmake.build()
