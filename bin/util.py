@@ -12,7 +12,6 @@ import tempfile
 import glob
 import textwrap
 import inspect
-from fspathdict import pdict
 from pathlib import Path
 from hashlib import sha1
 
@@ -233,7 +232,7 @@ def Wrapper():
       if inspect.isclass(obj):
         for base in obj.__bases__:
           if base.__name__ == "ConanFile":
-            return ConanPackage
+            return obj
     raise Exception("ERROR: Could not find a class subclassing from the ConanFile class.")
 
 class ConanPackageInstance(Wrapper()):
@@ -355,9 +354,8 @@ class PackageCollection:
 
     def export_packages(self,config='all',stdout=None):
       pks = filter_packages(config,self.package_instances)
-      config = pdict(self.config)
-      owner = config.get("/global/export/owner","Unknown")
-      channel = config.get("/global/export/channel","Unknown")
+      owner = self.config.get("global",dict()).get("export",dict()).get("owner","Unknown")
+      channel = self.config.get("global",dict()).get("export",dict()).get("channel","Unknown")
       for p in pks:
         p.export(owner=owner,channel=channel,stdout=stdout)
 
@@ -366,9 +364,8 @@ class PackageCollection:
       self.export_packages(config,stdout)
 
       pks = filter_packages(config,self.package_instances)
-      config = pdict(self.config)
-      owner = config.get("/global/export/owner","Unknown")
-      channel = config.get("/global/export/channel","Unknown")
+      owner = self.config.get("global",dict()).get("export",dict()).get("owner","Unknown")
+      channel = self.config.get("global",dict()).get("export",dict()).get("channel","Unknown")
       for p in pks:
         p.create(owner=owner,channel=channel,stdout=stdout)
 
