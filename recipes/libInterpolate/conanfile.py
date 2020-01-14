@@ -13,8 +13,13 @@ class ConanPackage(ConanFile):
     topics = ("C++", "Numerical Interpolation")
 
     generators = "cmake", "virtualenv"
-    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@conan/stable'
-    settings = "os", "compiler", "build_type", "arch"
+    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@cd3/devel'
+
+    def build_requirements(self):
+        # we need cmake to build. check if it is installed,
+        # and add it to the build_requires if not
+        if tools.which("cmake") is None:
+            self.build_requires("cmake_installer/3.16.0@conan/stable")
 
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
@@ -23,8 +28,8 @@ class ConanPackage(ConanFile):
     def build(self):
         if not self.develop:
           tools.replace_in_file(os.path.join(self.name, 'CMakeLists.txt'),
-                                'project(libInterp)',
-                                'project(libInterp)\nset(STANDALONE OFF)')
+                                'project(libInterpolate)',
+                                'project(libInterpolate)\nset(STANDALONE OFF)')
         cmake = CMake(self)
         defs = {}
         if not self.develop:

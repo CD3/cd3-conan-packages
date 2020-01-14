@@ -16,6 +16,12 @@ class ConanPackage(ConanFile):
     requires = 'boost/1.69.0@conan/stable'
     settings = "os", "compiler", "build_type", "arch"
 
+    def build_requirements(self):
+        # we need cmake to build. check if it is installed,
+        # and add it to the build_requires if not
+        if tools.which("cmake") is None:
+            self.build_requires("cmake_installer/3.16.0@conan/stable")
+
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")

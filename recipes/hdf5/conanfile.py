@@ -2,11 +2,6 @@ from conans import ConanFile, CMake, tools
 import os, pathlib
 
 class ConanPackage(ConanFile):
-    # define injected name and version
-    # so that the export.py script overwrite
-    # them instead of the name and version vars
-    injected_name = "ignore"
-    injected_version = "ignore"
     name = "hdf5"
     version = "1.10.5"
     description = "HDF5 C and C++ libraries"
@@ -14,7 +9,7 @@ class ConanPackage(ConanFile):
     generators = "cmake", "virtualenv"
     settings = "os", "compiler", "build_type", "arch"
 
-    requires = "zlib/1.2.11@conan/stable"
+    requires = "zlib/1.2.11"
 
     options = {
         "cxx": [True,False],
@@ -28,12 +23,17 @@ class ConanPackage(ConanFile):
         "zlib:shared=False"
     )
 
+    def build_requirements(self):
+        # we need cmake to build. check if it is installed,
+        # and add it to the build_requires if not
+        if tools.which("cmake") is None:
+            self.build_requires("cmake_installer/3.16.0@conan/stable")
+
     def source(self):
       vmajor,vminor,vpatch = self.version.split(".")
       tools.get(f"https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-{vmajor}.{vminor}/hdf5-{vmajor}.{vminor}.{vpatch}/src/hdf5-{vmajor}.{vminor}.{vpatch}.tar.gz")
 
       next(pathlib.Path('.').glob('hdf5-*')).rename("hdf5")
-      self.run("ls")
 
 
     def build(self):

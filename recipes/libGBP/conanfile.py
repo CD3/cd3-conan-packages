@@ -13,8 +13,14 @@ class ConanPackage(ConanFile):
     topics = ("C++", "Physics")
 
     generators = "cmake", "virtualenv"
-    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@conan/stable'
+    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@cd3/devel'
     settings = "os", "compiler", "build_type", "arch"
+
+    def build_requirements(self):
+        # we need cmake to build. check if it is installed,
+        # and add it to the build_requires if not
+        if tools.which("cmake") is None:
+            self.build_requires("cmake_installer/3.16.0@conan/stable")
 
     def source(self):
         self.run(f"git clone {self.git_url_basename}/{self.name}")
