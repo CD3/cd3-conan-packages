@@ -1,6 +1,10 @@
 from conans import ConanFile, tools, CMake
 import os
-from glob import glob
+import platform
+import pathlib
+import glob
+import io
+import re
 
 
 class ConanPackage(ConanFile):
@@ -22,15 +26,28 @@ class ConanPackage(ConanFile):
         return "sources"
 
     def build_requirements(self):
-        # we need cmake to build. check if it is installed,
+        # we need a recent version of cmake to build. check if it is installed,
         # and add it to the build_requires if not
+        cmake_min_version = "3.12.0"
+        cmake_req_version = "3.16.0"
+        need_cmake = False
+
         if tools.which("cmake") is None:
-            self.build_requires("cmake_installer/3.16.0@conan/stable")
+          need_cmake = True
+        else:
+          output = io.StringIO()
+          self.run("cmake --version",output=output)
+          version = re.search( "cmake version (?P<version>\S*)", output.getvalue())
+          if tools.Version( version.group("version") ) < cmake_min_version:
+            need_cmake = True
+
+        if need_cmake:
+          self.build_requires(f"cmake_installer/{cmake_req_version}@conan/stable")
 
     def source(self):
         source_url = "http://bitbucket.org/eigen/eigen"
         tools.get("{0}/get/{1}.tar.gz".format(source_url, self.version))
-        os.rename(glob("eigen-eigen-*")[0], self.source_subfolder)
+        os.rename(glob.glob("eigen-eigen-*")[0], self.source_subfolder)
 
     def package(self):
         cmake = CMake(self)
