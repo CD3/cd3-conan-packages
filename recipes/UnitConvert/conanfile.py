@@ -48,12 +48,34 @@ class ConanPackage(ConanFile):
         self.run(f"git clone {self.git_url}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
+        if self.options["boost"].magic_autolink:
+          if self.options["boost"].layout == "system":
+            cmake.definitions["BOOST_AUTO_LINK_SYSTEM"] = "ON"
+            tools.replace_in_file( f"{self.name}/CMakeLists.txt",
+            "target_compile_features( ${LIB_NAME} PUBLIC cxx_std_11 )",
+            '''target_compile_features( ${LIB_NAME} PUBLIC cxx_std_11 )
+              target_compile_definitions( ${LIB_NAME} PUBLIC BOOST_AUTO_LINK_SYSTEM)
+                 ''')
+        else:
+          tools.replace_in_file( f"{self.name}/CMakeLists.txt",
+          "target_compile_features( ${LIB_NAME} PUBLIC cxx_std_11 )",
+          '''target_compile_features( ${LIB_NAME} PUBLIC cxx_std_11 )
+            target_compile_definitions( ${LIB_NAME} PUBLIC BOOST_ALL_NO_LIB ) # disable auto-linking
+               ''')
+
     def build(self):
         cmake = CMake(self)
-        defs = {}
         if not self.develop:
-          defs['BUILD_UNIT_TESTS'] = False
-        cmake.configure(source_folder=self.name,defs=defs)
+          cmake.definitions['BUILD_UNIT_TESTS'] = False
+
+        if self.options["boost"].shared:
+          cmake.definitions["Boost_USE_STATIC_LIBS"] = "OFF"
+        else:
+          cmake.definitions["Boost_USE_STATIC_LIBS"] = "ON"
+
+
+
+        cmake.configure(source_folder=self.name)
         cmake.build()
 
     def package(self):
