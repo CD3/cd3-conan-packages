@@ -14,7 +14,10 @@ clean-tmp-dirs:
 clean-instances:
 	@ find ./ -iname 'conanfile-[0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z][0-9a-z].py' -exec rm {} \;
 
-clean-all: clean-tmp-dirs clean-instances
+clean-test_package-build-dirs:
+	@ rm recipies/*/test_package/build -rf
+
+clean-all: clean-tmp-dirs clean-instances clean-test_package-build-dirs
 
 test-utils:
 	pipenv run python -m pytest -s $(OPTS)

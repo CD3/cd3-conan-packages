@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, tools
-import os, io, re
+import os, io, re, platform
 class Test(ConanFile):
   generators = "virtualenv"
 
@@ -19,4 +19,7 @@ class Test(ConanFile):
     cmake.build()
 
   def test(self):
-    self.run("./example")
+    if platform.system() == "Windows":
+        self.run(".\Debug\example.exe")
+    else:
+        self.run("./example")

@@ -47,16 +47,12 @@ class ConanPackage(ConanFile):
         self.run(f"git clone {self.git_url}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
 
+
     def build(self):
-        if not self.develop:
-          tools.replace_in_file(os.path.join(self.source_folder, self.name, 'CMakeLists.txt'),
-                                f'project({self.name})',
-                                f'project({self.name})\nset(STANDALONE OFF)')
         cmake = CMake(self)
-        defs = {}
         if not self.develop:
-          defs["BUILD_TESTS"] = "OFF"
-        cmake.configure(source_folder=self.name,defs=defs)
+          cmake.definitions["BUILD_TESTS"] = "OFF"
+        cmake.configure(source_folder=self.name)
         cmake.build()
 
     def package(self):
