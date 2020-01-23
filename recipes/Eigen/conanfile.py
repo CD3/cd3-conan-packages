@@ -28,7 +28,7 @@ class ConanPackage(ConanFile):
     def build_requirements(self):
         # we need a recent version of cmake to build. check if it is installed,
         # and add it to the build_requires if not
-        cmake_min_version = "3.12.0"
+        cmake_min_version = "3.14.0"
         cmake_req_version = "3.16.0"
         need_cmake = False
 
