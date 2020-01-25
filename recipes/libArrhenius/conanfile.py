@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "libArrhenius"
     git_url_basename = "git://github.com/CD3"
-    version = "0.1"
-    checkout = "0.1"
+    version = "0.1.1"
+    checkout = "0.1.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for doing Arrhenius Integral calculations."

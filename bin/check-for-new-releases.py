@@ -30,7 +30,7 @@ def main():
     current_version = ConanPackage.version
     git_url = get_git_url(ConanPackage)
     if git_url is None:
-      print("No git url found for {name}. Skipping.")
+      print(f"No git url found for {name}. Skipping.")
       print()
       continue
 
