@@ -1,8 +1,21 @@
+dummy:
+	echo "Choose a command"
+
 export-all:
 	pipenv run python bin/export-packages.py $(OPTS)
 
+export-releases:
+	pipenv run python bin/export-packages.py $(OPTS) ./01-configurations/releases.yaml
+
+create-releases:
+	pipenv run python bin/export-packages.py --create ./01-configurations/releases.yaml $(OPTS)
+
 create-all:
 	pipenv run python bin/export-packages.py --create $(OPTS)
+
+upload-all:
+	@ echo "To upload conan packages, run the following command."
+	@ echo "$$ conan upload name/version@owner/testing --all -r=remote-to-upload-to"
 
 clean-tmp-dirs:
 	@ rm _* -rf
@@ -20,9 +33,6 @@ test-utils:
 
 test-integrations:
 	pipenv run python bin/test-integrations.py $(OPTS)
-
-create-masters:
-	pipenv run python bin/export-packages.py --create ./01-configurations/masters.yaml $(OPTS)
 
 list-package-references:
 	@ for file in recipes/*/conanfile.py; do conan info $$file; done 2>&1 | grep "^conanfile.py" | sed "s|conanfile.py (||;s|)$$|@$(OWNER_AND_CHANNEL)|"
