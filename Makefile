@@ -32,3 +32,6 @@ remove-all-from-remote:
 
 upload-all:
 	make list-package-references OWNER_AND_CHANNEL="cd3/devel" | grep "@cd3/devel" | xargs -n 1 conan upload -r cd3 --all
+
+check-for-new-releases:
+	pipenv run python bin/check-for-new-releases.py
