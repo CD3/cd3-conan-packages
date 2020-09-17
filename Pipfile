@@ -8,11 +8,11 @@ verify_ssl = true
 [packages]
 pyyaml = "*"
 pyparsing = "*"
-conan = "*"
 click = "*"
 libcst = "*"
 pytest = "*"
 fspathdict = "*"
+conan = "*"
 
 [requires]
 python_version = "3"

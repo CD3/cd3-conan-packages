@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "libGBP"
     git_url_basename = "git://github.com/CD3"
-    version = "0.1.1"
-    checkout = "v0.1.1"
+    version = "1.1.2"
+    checkout = "1.1.2"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library Gaussian bean propagation calculations."
@@ -18,7 +18,7 @@ class ConanPackage(ConanFile):
     topics = ("C++", "Physics")
 
     generators = "cmake", "virtualenv"
-    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@cd3/devel'
+    requires = 'boost/1.69.0@conan/stable', 'eigen/3.3.7@cd3/devel', 'BoostUnitDefinitions/0.2@cd3/devel'
     settings = "os", "compiler", "build_type", "arch"
 
     @property

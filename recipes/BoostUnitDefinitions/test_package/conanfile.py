@@ -1,7 +1,11 @@
 from conans import ConanFile, CMake, tools
 import os, io, re, platform
 class Test(ConanFile):
-  generators = "virtualenv"
+  generators = "cmake", "virtualenv"
+
+
+  def requirements(self):
+      self.requires("boost/1.71.0")
 
   def build_requirements(self):
     if tools.which("cmake") is None:
@@ -22,4 +26,4 @@ class Test(ConanFile):
     if platform.system() == "Windows":
         self.run(".\Debug\example.exe")
     else:
-        self.run("./example")
+        self.run("./bin/example")

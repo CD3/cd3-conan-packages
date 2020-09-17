@@ -13,9 +13,9 @@ create-releases:
 create-all:
 	pipenv run python bin/export-packages.py --create $(OPTS)
 
-upload-all:
+upload:
 	@ echo "To upload conan packages, run the following command."
-	@ echo "$$ conan upload name/version@owner/testing --all -r=remote-to-upload-to"
+	@ echo "$$ conan upload name/version@owner/channel --all -r=remote-to-upload-to"
 
 clean-tmp-dirs:
 	@ rm _* -rf
