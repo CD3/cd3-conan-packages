@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "UnitConvert"
     git_url_basename = "git://github.com/CD3"
-    version = "0.10"
-    checkout = "0.10"
+    version = "0.11"
+    checkout = "0.11"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for runtime unit conversions."
@@ -85,5 +85,5 @@ class ConanPackage(ConanFile):
         
     def package_info(self):
         self.env_info.UnitConvert_DIR = os.path.join(self.package_folder, "cmake")
-        self.cpp_info.libraries = ['UnitConvert']
+        self.cpp_info.libs = ['UnitConvert']
 
