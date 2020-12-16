@@ -2,6 +2,6 @@ global:
   export:
     owner: cd3
     channel: devel
-export-packages:
+export-tool:
   packages_to_export : all
   scratch-folder : "_package-exports.d"

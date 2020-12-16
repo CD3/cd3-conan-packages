@@ -77,11 +77,11 @@ def main(print_default_configuration,print_configuration,packages,owner,channel,
       override the package version
   package_instances[i].setting_overrides.checkout
       override the git reference that will be checked out to build the package. must be supported by the base recipe.
-  export-packages
+  export-tool
       a namespace used for setting for this script
-  export-packages.scratch-folder
+  export-tool.scratch-folder
       the name of the directory used for writing data to disk (logs, temp files, etc)
-  export-packages.packages_to_export
+  export-tool.packages_to_export
       a list of packages to export. by default, all packages will be exported.
       this will be overridden by the --packages option.
 

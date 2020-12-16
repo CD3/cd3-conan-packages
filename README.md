@@ -13,18 +13,26 @@ If you just want to use the libraries, add a remote to your conan.
 $ conan remote add cd3 https://api.bintray.com/conan/cd3/conan-devel 
 ```
 
-
-
-A Makefile is provided to run common commands. The Makefile will call python scripts in the `bin/` directory,
-and use `pipenv` to provide their dependencies, so you need to have `pipenv` installed (`pip install pipenv`).
-To export all of the recipes to your local cache, run
+Package recipes are stored in the `recipes/` directory. Some projects have snapshots of recipes for older versions, with the latest recipe named `conanfile.py`.
+Te export a recipe, you just need to run the `conan export` with the recipe file. For example:
 
 ```
-$ make export-all
+$ conan export ./recipes/libField/conanfile.py
+```
+
+This will export the recipe without a user/channel. To add a `user/channel` string, just pass it as another argument:
+```
+$ conan export ./recipes/libField/conanfile.py cd3/devel
+```
+
+The `export-packages.py` script will export all of the recipes in the repository with the user channel string `cd3/devel`
+
+```
+$ python export-packages.py
 ```
 
 Conan can download and build packages on demand, so no packages are built during the install. You will only download and build
-packages that your project actually depends on. By default, all packages are exported to the 'cd3/devel' channel.
+packages that your project actually depends on.
 
 To use a package in your project, use CMake's `find_package` command to find the package. Each package imports a target that you can link against. For example, to use `libField`:
 
