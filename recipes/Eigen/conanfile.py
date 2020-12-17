@@ -45,9 +45,9 @@ class ConanPackage(ConanFile):
           self.build_requires(f"cmake_installer/{cmake_req_version}@conan/stable")
 
     def source(self):
-        source_url = "http://bitbucket.org/eigen/eigen"
-        tools.get("{0}/get/{1}.tar.gz".format(source_url, self.version))
-        os.rename(glob.glob("eigen-eigen-*")[0], self.source_subfolder)
+        source_url = "http://gitlab.com/libeigen/eigen"
+        tools.get("{0}/-/archive/{1}/eigen-{1}.tar.gz".format(source_url, self.version))
+        os.rename(glob.glob("eigen-*")[0], self.source_subfolder)
 
     def package(self):
         cmake = CMake(self)
