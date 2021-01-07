@@ -25,10 +25,10 @@ This will export the recipe without a user/channel. To add a `user/channel` stri
 $ conan export ./recipes/libField/conanfile.py cd3/devel
 ```
 
-The `export-packages.py` script will export all of the recipes in the repository with the user channel string `cd3/devel`
+The `export-recipes.py` script will export all of the recipes in the repository with the user channel string `cd3/devel`
 
 ```
-$ python export-packages.py
+$ python export-recipes.py
 ```
 
 Conan can download and build packages on demand, so no packages are built during the install. You will only download and build
