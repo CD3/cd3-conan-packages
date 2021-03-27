@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "libIntegrate"
     git_url_basename = "git://github.com/CD3"
-    version = "0.4.3"
-    checkout = "v0.4.3"
+    version = "0.5.1"
+    checkout = "v0.5.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical integration supporting multiple methods/algorithms."
@@ -46,19 +46,11 @@ class ConanPackage(ConanFile):
     def source(self):
         self.run(f"git clone {self.git_url}")
         self.run(f"cd {self.name} && git checkout {self.checkout} && git log -1")
-        cmakelists = pathlib.Path(self.name)/"CMakeLists.txt"
-        cmakelists_text = cmakelists.read_text()
-        if not re.search("ARCH_INDEPENDENT",cmakelists_text):
-          tools.replace_in_file(str(cmakelists),
-          "COMPATIBILITY SameMajorVersion",
-          "COMPATIBILITY SameMajorVersion\nARCH_INDEPENDENT")
-
 
 
     def build(self):
         cmake = CMake(self)
-        if not self.develop:
-          cmake.definitions["BUILD_TESTS"] = "OFF"
+        cmake.definitions["BUILD_TESTS"] = "OFF"
         cmake.configure(source_folder=self.name)
         cmake.build()
 

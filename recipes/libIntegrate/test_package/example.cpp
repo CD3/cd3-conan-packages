@@ -1,4 +1,5 @@
-#include <Integrate.hpp>
+#include <libIntegrate/Integrate.hpp>
+
 
 int main()
 {
