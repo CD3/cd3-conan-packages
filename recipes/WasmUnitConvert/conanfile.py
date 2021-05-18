@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "WasmUnitConvert"
     git_url_basename = "git://github.com/CD3"
-    version = "0.11"
-    checkout = "master"
+    version = "0.13"
+    checkout = "0.13"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for runtime unit conversions compiled to WASM for use in web apps."
