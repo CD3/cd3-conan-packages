@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "libIntegrate"
     git_url_basename = "git://github.com/CD3"
-    version = "1.0"
-    checkout = "v1.0"
+    version = "1.1"
+    checkout = "v1.1"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical integration supporting multiple methods/algorithms."

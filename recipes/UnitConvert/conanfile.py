@@ -9,8 +9,8 @@ import re
 class ConanPackage(ConanFile):
     name = "UnitConvert"
     git_url_basename = "git://github.com/CD3"
-    version = "0.11"
-    checkout = "0.11"
+    version = "0.14"
+    checkout = "0.14"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for runtime unit conversions."
