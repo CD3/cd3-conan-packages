@@ -1,0 +1,23 @@
+sources:
+        "2.6.1":
+                url: "https://github.com/CD3/libInterpolate/archive/refs/tags/2.6.1.tar.gz"
+                sha256: "2433ec1407b8647e4ef2170788fd18b2aa07a515436872260d2266065c0c57dd"
+        "2.6":
+                url: "https://github.com/CD3/libInterpolate/archive/refs/tags/2.6.tar.gz"
+                sha256: "22ad53b1334fcfbfa896fa59ce892fb9bd70755290307d87f5a3abfb7245e537"
+        "2.5":
+                url: "https://github.com/CD3/libInterpolate/archive/refs/tags/2.5.tar.gz"
+                sha256: "281aeaa55d21ae0ff8c61df915fa09faf6c17ed340fbb65104aa143d6654997f"
+
+requirements:
+        "2.6.1":
+            - "boost/1.76.0"
+            - "eigen/3.3.7"
+
+        "2.6":
+            - "boost/1.76.0"
+            - "eigen/3.3.7"
+
+        "2.5":
+            - "boost/1.76.0"
+            - "eigen/3.3.7"
