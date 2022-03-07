@@ -6,7 +6,7 @@ what your project dependencies are, and it will automatically locate and configu
 
 # Using
 
-Note: several of these libraries are available at https://api.bintray.com/conan/cd3/conan-devel. This repo is used to develop those packages.
+Note: several of these libraries are available at https://cdc3.jfrog.io/artifactory/default-conan/. This repo is used to develop those packages.
 If you just want to use the libraries, add a remote to your conan.
 
 ```
