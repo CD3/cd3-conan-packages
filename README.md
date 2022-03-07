@@ -91,9 +91,9 @@ class ConanBuild(ConanFile):
 
 Now you can install your dependencies and build your project with two commands
 
-'''
+```
 $ mkdir build
 $ cd build
 $ conan install .. --build missing
 $ conan build ..
-'''
+```
