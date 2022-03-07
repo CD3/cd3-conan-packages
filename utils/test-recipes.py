@@ -27,13 +27,19 @@ for file in Path("recipes").glob("*/config.yml"):
         folder = data["versions"][version].get('folder',None)
         if folder:
             folder = root_dir/folder
+            test_dirs = filter(lambda x: x.is_dir(),  (folder/"_test_package").glob("*"))
             if (folder/"test_package").exists():
-                cmd = ['conan','test',str(folder/"test_package"),f"{name}/{version}@{args.user_channel_string}",'--build','missing']
+                test_dirs = itertools.chain(test_dirs, [folder/"test_package"])
+
+            for test_dir in test_dirs:
+                cmd = ['conan','test',str(test_dir),f"{name}/{version}@{args.user_channel_string}",'--build','missing']
+                print(cmd)
                 r = subprocess.run(cmd)
                 if r.returncode:
                     results.append(f"FAIL: {' '.join(cmd)}")
                 else:
                     results.append(f"PASS: {' '.join(cmd)}")
+
 
 for test_dir in Path("recipes").glob("*/test_package"):
     name = test_dir.parent
