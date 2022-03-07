@@ -5,6 +5,10 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser(description="Test some or all of the conan package references contained in this repository.")
 
+parser.add_argument("name",
+                    action="store",
+                    nargs='*',
+                    help="Test packages with name 'name'.",)
 parser.add_argument("--user-channel-string",
                     action="store",
                     default="cd3/devel",
@@ -23,6 +27,8 @@ for file in Path("recipes").glob("*/config.yml"):
     data = yaml.safe_load( file.read_text() )
     root_dir = file.parent
     name = root_dir.stem
+    if len(args.name) > 0 and (name not in args.name):
+        continue
     for version in data.get("versions",{}):
         folder = data["versions"][version].get('folder',None)
         if folder:
@@ -41,11 +47,6 @@ for file in Path("recipes").glob("*/config.yml"):
                     results.append(f"PASS: {' '.join(cmd)}")
 
 
-for test_dir in Path("recipes").glob("*/test_package"):
-    name = test_dir.parent
-    while name.parent.stem != "recipes":
-        name = name.parent
-    name = name.stem
 
 
 for r in results:
