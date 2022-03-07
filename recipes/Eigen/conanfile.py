@@ -10,7 +10,7 @@ import re
 class ConanPackage(ConanFile):
     name = "eigen"
     version = "3.3.7"
-    url = "https://github.com/conan-community/conan-eigen"
+    url = "https://github.com/CD3/cd3-conan-packages"
     homepage = "http://eigen.tuxfamily.org"
     description = "Eigen is a C++ template library for linear algebra: matrices, vectors, \
                    numerical solvers, and related algorithms."

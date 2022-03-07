@@ -9,6 +9,7 @@ import re
 class ConanPackage(ConanFile):
     name = "hdf5"
     version = "1.10.5"
+    url = "https://github.com/CD3/cd3-conan-packages"
     description = "HDF5 C and C++ libraries"
     license = "https://support.hdfgroup.org/ftp/HDF5/releases/COPYING"
     generators = "cmake", "virtualenv"

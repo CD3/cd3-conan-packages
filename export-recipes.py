@@ -4,16 +4,6 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser(description="Export the conan package references contained in this repository.")
 
-parser.add_argument("--all",
-                    action="store_true",
-                    default=False,
-                    help="Export all recipes in the repository, including recipes for old library versions." )
-
-parser.add_argument("--no-user-channel-string",
-                    action="store_true",
-                    default=False,
-                    help="Export packages WITHOUT a user/channel. Requires Conan >= 1.18" )
-
 parser.add_argument("--user-channel-string",
                     action="store",
                     default="cd3/devel",
@@ -25,10 +15,25 @@ args = parser.parse_args()
 
 
 export_cmd = ['conan','export']
+for file in Path("recipes").glob("*/config.yml"):
+    try:
+        import yaml
+    except: print(f"ERROR: could not import pyyaml which is required to parse {str(file)}.")
+
+    data = yaml.safe_load( file.read_text() )
+    root_dir = file.parent
+    name = root_dir.stem
+    for version in data.get("versions",{}):
+        folder = data["versions"][version].get('folder',None)
+        if folder:
+            cmd = export_cmd + [str(root_dir/folder), name+"/"+version+"@"+args.user_channel_string]
+            print(f"Exporting {name} version {version} with command '{' '.join(cmd)}'.")
+            subprocess.run(cmd)
+
 for file in Path("recipes").glob("*/conanfile*.py"):
   cmd = export_cmd + [str(file)]
-  if not args.no_user_channel_string:
-    cmd = cmd + [args.user_channel_string]
+  cmd = cmd + [args.user_channel_string]
 
   print(f"Exporting {str(file)} with command '{' '.join(cmd)}'.")
   subprocess.run(cmd)
+

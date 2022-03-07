@@ -11,6 +11,7 @@ class ConanPackage(ConanFile):
     git_url_basename = "git://github.com/CD3"
     version = "0.13"
     checkout = "0.13"
+    url = "https://github.com/CD3/cd3-conan-packages"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for runtime unit conversions compiled to WASM for use in web apps."

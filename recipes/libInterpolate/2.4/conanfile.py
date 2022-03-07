@@ -11,6 +11,7 @@ class ConanPackage(ConanFile):
     git_url_basename = "git://github.com/CD3"
     version = "2.4"
     checkout = "2.4"
+    url = "https://github.com/CD3/cd3-conan-packages"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library for numerical interpolation supporting multiple methods/algorithms."

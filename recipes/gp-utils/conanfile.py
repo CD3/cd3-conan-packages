@@ -11,6 +11,7 @@ class ConanPackage(ConanFile):
     git_url_basename = "git://github.com/CD3"
     version = "0.1"
     checkout = "0.1"
+    url = "https://github.com/CD3/cd3-conan-packages"
 
     author = "CD Clark III clifton.clark@gmail.com"
     description = "A C++ library and command line apps for working with gnuplot data files."
