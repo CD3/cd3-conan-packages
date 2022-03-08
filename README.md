@@ -10,28 +10,30 @@ Note: several of these libraries are available at https://cdc3.jfrog.io/artifact
 If you just want to use the libraries, add a remote to your conan.
 
 ```
-$ conan remote add cd3 https://api.bintray.com/conan/cd3/conan-devel 
+$ conan remote add cd3 https://cdc3.jfrog.io/artifactory/api/conan/default-conan
 ```
 
-Package recipes are stored in the `recipes/` directory. Some projects have snapshots of recipes for older versions, with the latest recipe named `conanfile.py`.
-Te export a recipe, you just need to run the `conan export` with the recipe file. For example:
+Note that my JFrog server name is `cdc3.jfrog.io`, not `cd3`. My original account got deleted for lack of traffic, but the old is unavailable now for some reason.
+
+Package recipes are stored in the `recipes/` directory. Originally, I stored recipes for all versions, including the latest version, in the same directory, with
+the latest version recipe named `conanfile.py`. Other version recipes were named `conanfile-x.x.x.py`. I have recently begun following the
+[conan-center-index](https://github.com/conan-io/conan-center-index) convention
+of storing recipes in subdirectories, and using `config.yml` files to specify
+the version-to-file mapping. So, it is no longer possible to export these recipes by simply calling `conan export ...` with the recipe file name.
+You will have to also specify the package name and version
 
 ```
-$ conan export ./recipes/libField/conanfile.py
+$ conan export ./recipes/libField/all/conanfile.py libField/0.9@ # can't just do conan export ./recipes/libField/all/conanfile.py anymore...
 ```
 
-This will export the recipe without a user/channel. To add a `user/channel` string, just pass it as another argument:
-```
-$ conan export ./recipes/libField/conanfile.py cd3/devel
-```
-
-The `export-recipes.py` script will export all of the recipes in the repository with the user channel string `cd3/devel`
+Fortunately, the `export-recipes.py` script is provided to export all of the recipes in the repository automatically. By default, it will export
+all recipes with the user channel string `cd3/devel`
 
 ```
 $ python export-recipes.py
 ```
 
-Conan can download and build packages on demand, so no packages are built during the install. You will only download and build
+Conan can download and build packages on demand, so no packages are built when the `export-recipes.py` script is run. You will only download and build
 packages that your project actually depends on.
 
 To use a package in your project, use CMake's `find_package` command to find the package. Each package imports a target that you can link against. For example, to use `libField`:
@@ -48,11 +50,11 @@ But conan can do this for you automatically. To use conan, create a `conanfile.t
 
 ```
 [requires]
-libField/master@cd3/devel
+libField/0.9@cd3/devel
 ```
 
 `libField` depends on Boost, but you don't need to add boost as a requirement unless your project uses it directly. Conan will download
-boost so that it can build `libField`. No you can use conan to install your dependencies, and build your dependencies.
+boost so that it can build `libField`. Now you can use conan to install your dependencies, and build your dependencies.
 
 ```
 $ mkdir build
@@ -61,11 +63,11 @@ $ conan install .. --build missing
 ```
 
 The `--build missing` option tells conan to download the source code and build any project that are not in the local cache.
-Since the `install.py` script does not build any packages, this will download and build `libField`. But this will only be done
-once. If you require `libField` from another project, conan will use the package that it already build.
+Since the `export-recipes.py` script does not _build_ any packages, this will download and build `libField`. But this will only be done
+once. If you require `libField` from another project (with the same version and settings), conan will use the package that it already build.
 
 Running `conan install` will create a script named `activate.sh` (or `activate.bat` on Windows). This script contains
-environment variable settings that tell CMake how to find the dependencies, so to build your project, just run:
+environment variable settings that tell CMake how to find the dependencies, so to build your project, you can just run:
 
 ```
 $ source activate.sh
@@ -81,7 +83,7 @@ from conans import ConanFile, CMake
 
 class ConanBuild(ConanFile):
     generators = "cmake", "virtualenv"
-    requires = 'libField/master@cd3/devel'
+    requires = 'libField/0.9@cd3/devel'
 
     def build(self):
       cmake = CMake(self)
