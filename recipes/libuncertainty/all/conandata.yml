@@ -1,0 +1,7 @@
+sources:
+        "0.1":
+                url: "https://github.com/CD3/libUncertainty/archive/refs/tags/0.1.tar.gz"
+                sha256: "f597afd2e105478ace383ea1a8bdc15ff87a79ed7193669a030af923fd32fcdf"
+        "0.1.1":
+                url: "https://github.com/CD3/libUncertainty/archive/refs/tags/0.1.1.tar.gz"
+                sha256: "ee787b3b30c0eb0e8d09d23fb4cfc4819a8eff74d24da079694de062a13c98d7"
