@@ -1,5 +1,5 @@
 from conans import ConanFile, CMake, tools
-import os, io, re, platform
+import os, io, re, platform, pathlib
 class Test(ConanFile):
   generators = "virtualenv"
 

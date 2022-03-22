@@ -33,7 +33,8 @@ for file in Path("recipes").glob("*/config.yml"):
             if folder:
                 cmd = export_cmd + [str(root_dir/folder), name+"/"+version+"@"+args.user_channel_string]
                 print(f"Exporting {name} version {version} with command '{' '.join(cmd)}'.")
-                subprocess.run(cmd)
+                result = subprocess.run(cmd)
+
 
 for file in Path("recipes").glob("*/conanfile*.py"):
   name = file.parent.stem

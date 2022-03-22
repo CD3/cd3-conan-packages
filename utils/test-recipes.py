@@ -1,6 +1,7 @@
 from pathlib import Path
 import subprocess
 import itertools
+import os
 from argparse import ArgumentParser
 
 parser = ArgumentParser(description="Test some or all of the conan package references contained in this repository.")
@@ -19,6 +20,12 @@ args = parser.parse_args()
 
 results = []
 
+profiles = subprocess.check_output(['conan', 'profile', 'list'])
+if profiles.startswith(b"No profiles defined"):
+    print("Creating default profile")
+    subprocess.run(['conan','profile','new','default','--detect'])
+    subprocess.run(['conan','profile','update','settings.compiler.libcxx=libstdc++11','default'])
+
 for file in Path("recipes").glob("*/config.yml"):
     try:
         import yaml
@@ -30,9 +37,21 @@ for file in Path("recipes").glob("*/config.yml"):
     if len(args.name) > 0 and (name not in args.name):
         continue
     for version in data.get("versions",{}):
-        folder = data["versions"][version].get('folder',None)
+        name = root_dir.stem
+        folder = str(data["versions"][version].get('folder',None))
         if folder:
             folder = root_dir/folder
+
+            cmd = ['conan', 'export', str(folder), f"{name}/{version}@{args.user_channel_string}"]
+            print(f"Exporting {name} version {version} with command '{' '.join(cmd)}'.")
+            result = subprocess.run(cmd)
+            if result.returncode:
+                name = name.lower()
+                cmd = ['conan', 'export', str(folder), f"{name}/{version}@{args.user_channel_string}"]
+                print(f"Export failed. Trying again with command '{' '.join(cmd)}'.")
+                result = subprocess.run(cmd)
+
+
             test_dirs = filter(lambda x: x.is_dir(),  (folder/"_test_package").glob("*"))
             if (folder/"test_package").exists():
                 test_dirs = itertools.chain(test_dirs, [folder/"test_package"])

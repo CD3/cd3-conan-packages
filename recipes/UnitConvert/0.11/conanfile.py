@@ -8,9 +8,9 @@ import re
 
 class ConanPackage(ConanFile):
     name = "UnitConvert"
-    git_url_basename = "git://github.com/CD3"
-    version = "0.14"
-    checkout = "0.14"
+    git_url_basename = "https://github.com/CD3/"
+    version = "0.11"
+    checkout = "0.11"
     url = "https://github.com/CD3/cd3-conan-packages"
 
     author = "CD Clark III clifton.clark@gmail.com"
