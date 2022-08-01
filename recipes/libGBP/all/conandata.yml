@@ -1,0 +1,13 @@
+sources:
+        "1.0":
+                url: "https://github.com/CD3/libGBP/archive/refs/tags/1.0.tar.gz"
+                sha256: "d7068a4cecd6968fe21567757f71f75f5e9061bca4856629fa6ef5158d313bf2"
+        "1.1.1":
+                url: "https://github.com/CD3/libGBP/archive/refs/tags/1.1.1.tar.gz"
+                sha256: "c740fd02579b14e93f00e426fd8023b4f85d131c824f680fb7b90b7f25feb5df"
+        "1.1.2":
+                url: "https://github.com/CD3/libGBP/archive/refs/tags/1.1.2.tar.gz"
+                sha256: "f42dc2d025f5aefd6fee1bc8b9cbfca3c6243e975b2b04796a9f57cac97ef6c9"
+        "1.2":
+                url: "https://github.com/CD3/libGBP/archive/refs/tags/1.2.tar.gz"
+                sha256: "61c3ee13338be35fabde81e08fe6e704d1a3e86136a26c5a573ecb71da371ac0"
