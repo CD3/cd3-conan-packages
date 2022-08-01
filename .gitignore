@@ -6,3 +6,4 @@ _tmp*/
 .*.swp
 build/
 .conan/
+test-output/
