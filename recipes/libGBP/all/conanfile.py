@@ -16,7 +16,7 @@ class ConanPackage(ConanFile):
     license = "MIT"
     topics = ("C++", "Physics")
 
-    requires = 'boost/1.72.0', 'eigen/3.3.7', 'BoostUnitDefinitions/0.2@cd3/devel'
+    requires = 'boost/1.72.0', 'eigen/3.3.7', 'cd3-boost-unit-definitions/0.2.2'
     settings = "os", "compiler", "build_type", "arch"
 
     def source(self):
