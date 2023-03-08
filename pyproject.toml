@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "cd3-conan-package-recipes"
+version = "0.1.0"
+description = "Conan recipes for CD3 projects."
+authors = ["CD Clark III <clifton.clark@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "cd3_conan_package_recipes"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+conan = "^2.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
