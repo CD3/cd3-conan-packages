@@ -1,20 +1,26 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.build import can_run
 import os, io, re, platform
+
+
 class Test(ConanFile):
   generators = "CMakeDeps", "CMakeToolchain"
   settings = 'build_type', 'os', 'arch', 'compiler'
 
 
   def requirements(self):
-      self.requires("boost/1.71.0")
+      self.requires(self.tested_reference_str)
 
   def build(self):
     cmake = CMake(self)
     cmake.configure()
     cmake.build()
 
+  def layout(self):
+      cmake_layout(self)
+
   def test(self):
-    if platform.system() == "Windows":
-        self.run(".\Debug\example.exe")
-    else:
-        self.run("./example")
+    if can_run(self):
+        cmd = os.path.join(self.cpp.build.bindir,"example")
+        self.run(cmd,env="conanrun")

@@ -1,8 +1,10 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeToolchain
+from conan.tools.files import get,copy
 import os, glob, io, re, pathlib
 
 class ConanPackage(ConanFile):
-    name = "BoostUnitDefinitions"
+    name = "boost-unit-definitions"
     url = "https://github.com/CD3/cd3-conan-packages"
 
     settings = "os", "compiler", "build_type", "arch"
@@ -14,15 +16,14 @@ class ConanPackage(ConanFile):
     topics = ("C++", "Physics")
 
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version])
+        get(self,**self.conan_data["sources"][self.version])
 
     def package(self):
-
-        self.copy('*.hpp', src=f'BoostUnitDefinitions-{self.version}/src', dst='include')
-        self.copy('LICENSE.md', src=f'BoostUnitDefinitions-{self.version}')
+        copy(self,'*.hpp', f'BoostUnitDefinitions-{self.version}/src', os.path.join(self.package_folder,'include'))
+        copy(self,'LICENSE.md', f'BoostUnitDefinitions-{self.version}', self.package_folder)
 
     def package_id(self):
-        self.info.header_only()
+        self.info.clear()
 
     def package_info(self):
         self.cpp_info.set_property("cmake_file_name","BoostUnitDefinitions")
