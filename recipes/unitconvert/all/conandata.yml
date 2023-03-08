@@ -2,3 +2,6 @@ sources:
         "0.14.1":
                 url: "https://github.com/CD3/UnitConvert/archive/refs/tags/0.14.1.tar.gz"
                 sha256: "41eff62ecba800f33442a9167a4e85d9653fc8dd246bc84755ca53488465cf91"
+        "0.15":
+                url: "https://github.com/CD3/UnitConvert/archive/refs/tags/0.15.tar.gz"
+                sha256: "20731fbb1d384760c8f63d488b5d32e7252a2c90724448c09f2cb33f102fe94e"
