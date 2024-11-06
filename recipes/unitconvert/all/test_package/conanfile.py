@@ -1,25 +1,27 @@
-from conans import ConanFile, CMake, tools
-import os, io, re, platform, pathlib
-class Test(ConanFile):
-  generators = "virtualenv"
+import os
 
-  def build_requirements(self):
-    if tools.which("cmake") is None:
-      self.build_requires("cmake_installer/3.16.0@conan/stable")
-    else:
-      output = io.StringIO()
-      self.run("cmake --version",output=output)
-      version = re.search( "cmake version (?P<version>\S*)", output.getvalue())
-      if tools.Version( version.group("version") ) < "3.12.0":
-        self.build_requires("cmake_installer/3.16.0@conan/stable")
+from conan import ConanFile
+from conan.tools.cmake import CMake, cmake_layout
+from conan.tools.build import can_run
 
-  def build(self):
-    cmake = CMake(self)
-    cmake.configure()
-    cmake.build()
 
-  def test(self):
-    if platform.system() == "Windows":
-        self.run(".\Debug\example.exe")
-    else:
-        self.run("./example")
+class unitconvertTestConan(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    generators = "CMakeDeps", "CMakeToolchain"
+
+    def requirements(self):
+        self.requires(self.tested_reference_str)
+        self.requires("boost/1.86.0")
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+
+    def layout(self):
+        cmake_layout(self)
+
+    def test(self):
+        if can_run(self):
+            cmd = os.path.join(self.cpp.build.bindir, "example")
+            self.run(cmd, env="conanrun")
