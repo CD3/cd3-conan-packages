@@ -1,9 +1,0 @@
-{
-    "version": 4,
-    "vendor": {
-        "conan": {}
-    },
-    "include": [
-        "/home/cclark/Code/sync/projects/cd3-conan-package-recipes/recipes/UnitConvert/all/test_package/build/generators/CMakePresets.json"
-    ]
-}
