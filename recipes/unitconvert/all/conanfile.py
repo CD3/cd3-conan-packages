@@ -1,9 +1,7 @@
-from conans import ConanFile, CMake, tools, errors
-import os
-import platform
+from conan import ConanFile
+from conan.tools.cmake import CMake, CMakeToolchain
+from conan.tools.files import get,copy, replace_in_file
 import pathlib
-import io
-import re
 
 class ConanPackage(ConanFile):
     name = "unitconvert"
@@ -13,31 +11,22 @@ class ConanPackage(ConanFile):
     license = "MIT"
     topics = ("C++", "physics", "dimensional analysis", "unit conversions")
     url = "https://github.com/CD3/cd3-conan-packages"
-
-    generators = "cmake", "virtualenv"
-    requires = 'boost/1.72.0'
     settings = "os", "compiler", "build_type", "arch"
+
+    requires = 'boost/1.72.0'
 
     @property
     def _source_subfolder(self):
         return "source_subfolder"
 
-    def build_requirements(self):
-      self.tool_requires(f"cmake/[>3.16.0]")
-
     def source(self):
-        tools.get(**self.conan_data["sources"][self.version], strip_root=True, destination=self._source_subfolder)
-        tools.replace_in_file( f"{self._source_subfolder}/CMakeLists.txt", 'set_target_properties( ${LIB_NAME} PROPERTIES DEBUG_POSTFIX "-d" )', "")
+        get(self,**self.conan_data["sources"][self.version], strip_root=True, destination=self._source_subfolder)
+        replace_in_file(self, f"{self._source_subfolder}/CMakeLists.txt", 'set_target_properties( ${LIB_NAME} PROPERTIES DEBUG_POSTFIX "-d" )', "")
 
 
     def _configure_cmake(self):
         cmake = CMake(self)
         cmake.definitions['BUILD_UNIT_TESTS'] = False
-        # if self.options["boost"].shared:
-        #   cmake.definitions["Boost_USE_STATIC_LIBS"] = "OFF"
-        # else:
-        #   cmake.definitions["Boost_USE_STATIC_LIBS"] = "ON"
-
         cmake.configure(source_folder=self._source_subfolder)
 
         return cmake
