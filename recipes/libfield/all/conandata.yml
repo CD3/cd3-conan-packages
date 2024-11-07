@@ -1,0 +1,13 @@
+sources:
+        "0.7":
+                url: "https://github.com/CD3/libField/archive/refs/tags/0.7.tar.gz"
+                sha256: "e7a5c04623e18e2760f203c5a69d96b01b67890558e9fa98deb1a40185307c53"
+        "0.8":
+                url: "https://github.com/CD3/libField/archive/refs/tags/0.8.tar.gz"
+                sha256: "14d80dda3502dd361cc7e36a083bb82ce6e2b2cb5b6e54282d78955d79300b5a"
+        "0.9":
+                url: "https://github.com/CD3/libField/archive/refs/tags/0.9.tar.gz"
+                sha256: "5b380664088f7044b008275d955939d7d985019c43a572f0265ba81462f7f854"
+        "0.9.1":
+                url: "https://github.com/CD3/libField/archive/refs/tags/0.9.1.tar.gz"
+                sha256: "e834a322b99bed4549eb740202a9131b5ba062d18744cfa9cdc3359e6439f6df"
