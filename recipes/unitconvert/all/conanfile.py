@@ -5,7 +5,7 @@ from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import copy, get, replace_in_file
 
 
-class ConanPackage(ConanFile):
+class unitconvertRecipe(ConanFile):
     name = "unitconvert"
 
     author = "CD Clark III clifton.clark@gmail.com"
