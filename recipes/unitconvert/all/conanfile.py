@@ -17,7 +17,8 @@ class unitconvertRecipe(ConanFile):
     options = {"shared": [True, False], "fPIC": [True, False]}
     default_options = {"shared": False, "fPIC": True}
 
-    requires = "boost/1.86.0"
+    def requirements(self):
+        self.requires("boost/1.86.0", transitive_headers=True)
 
     def config_options(self):
         if self.settings.os == "Windows":
@@ -47,6 +48,12 @@ class unitconvertRecipe(ConanFile):
             self,
             "CMakeLists.txt",
             'set_target_properties( ${LIB_NAME} PROPERTIES DEBUG_POSTFIX "-d" )',
+            "",
+        )
+        replace_in_file(
+            self,
+            "CMakeLists.txt",
+            "$<$<NOT:$<TARGET_EXISTS:CONAN_PKG::boost>>:Boost::disable_autolinking>",
             "",
         )
 

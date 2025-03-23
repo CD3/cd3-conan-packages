@@ -1,8 +1,8 @@
 import os
 
 from conan import ConanFile
-from conan.tools.cmake import CMake, cmake_layout
 from conan.tools.build import can_run
+from conan.tools.cmake import CMake, cmake_layout
 
 
 class unitconvertTestConan(ConanFile):
@@ -11,7 +11,7 @@ class unitconvertTestConan(ConanFile):
 
     def requirements(self):
         self.requires(self.tested_reference_str)
-        self.requires("boost/1.86.0")
+        self.requires("boost/1.86.0", options={"header_only": True})
 
     def build(self):
         cmake = CMake(self)
