@@ -12,7 +12,7 @@ class libfieldRecipe(ConanFile):
     no_copy_source = True
 
     def requirements(self):
-        self.requires("boost/1.86.0")
+        self.requires("boost/1.86.0", transitive_headers=True)
 
     def layout(self):
         self.cpp.source.includedirs = ["src"]
